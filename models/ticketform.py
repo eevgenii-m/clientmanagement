@@ -5,7 +5,7 @@ from clientmanagement import modelgetters, sendemail, error_views
 from clientmanagement import views as main_views
 from clientmanagement.widget import quill
 from django.urls import reverse
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render, redirect
 from datetime import datetime
 from phonenumber_field.formfields import PhoneNumberField
 from models import ticket, ticket_commentform, uploaded_file
@@ -19,7 +19,7 @@ class TicketForm(forms.ModelForm):
     contactphone = PhoneNumberField(label="Contact phone number", required=False, help_text="You can add the extension after an x")
     rcaptcha = ReCaptchaField(label='', required=True, error_messages={'required': 'Please, check the box to prove you are not a robot'}, public_key=settings.RECAPTCHA_CHECKBOX_PUBLIC_KEY, private_key=settings.RECAPTCHA_CHECKBOX_PRIVATE_KEY)
     
-    file_field = forms.FileField(label="Attach files", widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
+    file_field = forms.FileField(label="Attach files", widget=forms.ClearableFileInput(), required=False)
     order = ("title", "companyname", "contactname", "contactemail", "contactphone", "description", "file_field", "rcaptcha")
     class Meta:
         model = ticket.Ticket

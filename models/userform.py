@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.urls import reverse
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render, redirect
 from datetime import datetime
 from clientmanagement import userfunctions
 

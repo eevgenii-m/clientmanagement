@@ -1,7 +1,7 @@
 from django import forms
 from clientmanagement import views as main_views
 from django.urls import reverse
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render, redirect
 from datetime import datetime
 from models import wikiarticle
 from clientmanagement.widget import quill

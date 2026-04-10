@@ -5,7 +5,7 @@ from clientmanagement import modelgetters, sendemail
 from clientmanagement.widget import quill
 from clientmanagement import views as main_views
 from django.urls import reverse
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render, redirect
 from datetime import datetime, timezone
 from phonenumber_field.formfields import PhoneNumberField
 from models import ticket_comment, ticket, uploaded_file
@@ -14,7 +14,7 @@ from django.contrib.sites.shortcuts import get_current_site
 
 class Ticket_CommentForm(forms.ModelForm):
     description = quill.QuillField(label='Comment*')
-    file_field = forms.FileField(label="Attach files", widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
+    file_field = forms.FileField(label="Attach files", widget=forms.ClearableFileInput(), required=False)
     
 
     class Meta:

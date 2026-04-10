@@ -3,7 +3,7 @@ from django.conf import settings
 import collections, copy, pytz
 from clientmanagement import views as main_views
 from django.urls import reverse
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render, redirect
 from datetime import datetime
 from models import tools
 from clientmanagement.widget import clear_file_input

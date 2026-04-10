@@ -4,7 +4,7 @@ from models import client
 from clientmanagement import views as main_views
 from clientmanagement.widget import clear_file_input
 from django.urls import reverse
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render, redirect
 from datetime import datetime
 import os, pytz
 

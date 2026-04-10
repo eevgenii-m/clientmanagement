@@ -3,7 +3,7 @@ from models import secretnote
 from clientmanagement import views as main_views, modelgetters, error_views
 from clientmanagement.widget import quill
 from django.urls import reverse
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render, redirect
 from datetime import datetime, timedelta
 from phonenumber_field.formfields import PhoneNumberField
 import collections, copy

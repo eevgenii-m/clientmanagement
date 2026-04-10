@@ -3,7 +3,7 @@ from models import othernetequip
 from models import client
 from clientmanagement import views as main_views
 from django.urls import reverse
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render, redirect
 from datetime import datetime
 
 class OtherNetworkEquipmentForm(forms.ModelForm):

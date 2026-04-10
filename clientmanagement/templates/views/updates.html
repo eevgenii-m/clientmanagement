@@ -1,4 +1,4 @@
-{% extends "_basewide.html" %} {% load staticfiles %} {% block extra_css %}{% endblock %}{% block extra_javascript %} {% endblock %} {% block body %}
+{% extends "_basewide.html" %} {% load static %} {% block extra_css %}{% endblock %}{% block extra_javascript %} {% endblock %} {% block body %}
 <h2>System updates</h2>
 {% for post in posts %}
 {% include "views/components/oneupdate.html" with post=post %}

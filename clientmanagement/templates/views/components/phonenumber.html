@@ -1,9 +1,10 @@
 {% with 1 as code %}  
 <a href="tel:{{ phone }}">
-{% ifequal phone.country_code code %}
+{% if phone.country_code == code %}
 {{ phone.as_national}}
 {% else %}
 {{ phone.as_international}}
-{% endifequal %}
+{% endif %}
 </a>
 {% endwith %}
+

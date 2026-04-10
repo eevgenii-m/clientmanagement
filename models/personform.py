@@ -3,7 +3,7 @@ from models import person
 from models import computers
 from models import client
 from django.urls import reverse
-from django.shortcuts import render, render_to_response, redirect
+from django.shortcuts import render, redirect
 from datetime import datetime
 from phonenumber_field.formfields import PhoneNumberField
 import collections, copy

@@ -4,7 +4,7 @@ from urllib.parse import urlencode, urlparse, parse_qs
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.urls import reverse
-from django.shortcuts import render_to_response, redirect
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required 
 from datetime import datetime
 from django import forms

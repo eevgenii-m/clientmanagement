@@ -1,4 +1,4 @@
-{% extends "_basenarrow.html" %}{% block page_title %}Log in to CMS Infotek{% endblock %}{% load staticfiles %} {% block extra_css %}{% endblock %} {% block body %} {% csrf_token %}
+{% extends "_basenarrow.html" %}{% block page_title %}Log in to CMS Infotek{% endblock %}{% load static %} {% block extra_css %}{% endblock %} {% block body %} {% csrf_token %}
 <h2 class="text-center">Welcome to the Infotek Client Management System</h2>
 
 <form method="post" action="{% url 'login' %}">

@@ -7,7 +7,7 @@ from urllib.parse import urlencode, urlparse, parse_qs
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import forms as userforms
 from django.urls import reverse
-from django.shortcuts import render_to_response, redirect
+from django.shortcuts import render, redirect
 from django.utils.cache import patch_response_headers
 from django.conf import settings
 from django.middleware import csrf
@@ -44,7 +44,7 @@ def initRequest(request):
         data = {
             'errormessage': 'Error appeared while encoding URL!'
         }
-        return False, render_to_response(json.dumps(data), content_type='text/html')
+        return False, HttpResponse(json.dumps(data), content_type='text/html')
 
     ## Set default page lifetime in the http header, for the use of the front end cache
     request.session['max_age_minutes'] = 10
