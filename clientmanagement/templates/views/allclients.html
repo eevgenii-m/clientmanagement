@@ -1,35 +1,102 @@
-{% extends "_basenarrow.html" %} {% load static %} {% block extra_css %}{% endblock %}{% block extra_javascript %} {% endblock %} {% block body %}
-<h2>All Clients</h2>
-<table id='clienttable'>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Phone</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for client in allclients %} {% include "views/oneitemrow/clientrow.html" with obj=client.clientobj name=client.clientname phonenumber=client.clientphonenumber %} {% endfor %}
-    </tbody>
-</table>
+{% extends "_basenorm.html" %}
+{% load static %}
 
-<div class="row align-middle" data-equalizer>
-    <div class='columns'></div>
-    <div class="columns small-9 middle-7 large-5 text-middle" data-equalizer-watch>
-        <a href="{% url 'newclient' %}" class="button round centered-block-element">Create new client</a>
+{% block page_title %}Clients{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Lock page scroll — only the DataTable body scrolls */
+    html, body { overflow: hidden; height: 100%; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+<!-- Sticky header: title + search + add button all in one row -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-4">
+    <div class="max-w-5xl mx-auto flex items-center gap-4">
+        <!-- Title -->
+        <div class="min-w-0">
+            <h1 class="text-xl font-semibold text-slate-800 leading-tight">Clients</h1>
+            <p class="text-xs text-slate-500">All managed client companies</p>
+        </div>
+
+        <!-- Search (grows to fill space) -->
+        <div class="flex-1 relative">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+            </svg>
+            <input type="search" id="client-search"
+                   placeholder="Search clients, emails…"
+                   class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 font-sans transition-colors">
+        </div>
+
+        <!-- Add button -->
+        <a href="{% url 'newclient' %}"
+           class="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Add Client
+        </a>
     </div>
-    <div class='columns'></div>
+</div>
+
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <table id="clienttable" class="w-full">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Actions</th>
+                <th>Emails</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in allclients %}
+            {% include "views/oneitemrow/clientrow.html" with obj=client.clientobj name=client.clientname phonenumber=client.clientphonenumber person_emails=client.person_emails %}
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 {% if needdatatables %}
 <script>
     $(document).ready(function() {
-        $('#clienttable').DataTable({
-            "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ],
-            "iDisplayLength": -1,
-            "bSort" : false
+        var dt = $('#clienttable').DataTable({
+            "paging": false,
+            "info": false,
+            "searching": true,
+            "dom": 't',
+            "scrollY": "300px",
+            "scrollCollapse": true,
+            "autoWidth": false,
+            "order": [[0, "asc"]],
+            "columnDefs": [
+                { "orderable": false, "targets": [1, 2, 3] },
+                { "visible": false, "targets": [3] }
+            ]
         });
+
+        /* Wire custom search input */
+        $('#client-search').on('input', function() {
+            dt.search(this.value).draw();
+        });
+
+        /* Size the scroll body to fill remaining viewport */
+        function fitTable() {
+            var scrollBody = $('#clienttable').closest('.dataTables_wrapper').find('.dataTables_scrollBody');
+            if (!scrollBody.length) return;
+            var top = scrollBody.offset().top;
+            var h = window.innerHeight - top - 8;
+            scrollBody.css({ 'height': h + 'px', 'max-height': h + 'px' });
+        }
+        fitTable();
+        $(window).on('resize', fitTable);
     });
 </script>
 {% endif %}
+
 {% endblock %}

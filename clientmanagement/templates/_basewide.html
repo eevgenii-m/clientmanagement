@@ -1,11 +1,7 @@
- {% extends "_base.html" %} {% load static %} {% block bodysec %}
-<div class="row">
-    <div class="columns align-center small-0 medium-0 large-0">
-    </div>
-    <div class="columns align-center small-12 medium-12 large-12 container-padded">
-        {% block body %} {% endblock %}
-    </div>
-    <div class="columns align-center small-0 medium-0 large-0 container-padded">
-    </div>
-</div>
+{% extends "_base.html" %}
+{% load static %}
+
+{# Wide layout — full content area width. Use for tables, dashboards, wide data views. #}
+{% block bodysec %}
+{% block body %}{% endblock %}
 {% endblock %}

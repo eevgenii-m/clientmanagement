@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/png" href="{% static 'img/base/favicon.ico' %}" />
     <title>{% block page_title %}Infotek{% endblock %} — Infotek Solutions & Support</title>
 
     <!-- Tailwind CSS -->
@@ -76,21 +77,19 @@
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
 
-        /* DataTables override for clean look */
-        .dataTables_wrapper .dataTables_filter input {
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 6px 12px;
-            outline: none;
-            font-family: 'DM Sans', sans-serif;
+        /* ── DataTables overrides ── */
+
+        /* Left-align all header and body cells */
+        table.dataTable thead th,
+        table.dataTable thead td,
+        table.dataTable tbody td {
+            text-align: left !important;
+            padding: 10px 12px !important;
         }
-        .dataTables_wrapper .dataTables_length select {
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-family: 'DM Sans', sans-serif;
-        }
-        table.dataTable thead th {
+
+        /* scrollY header table styling */
+        .dataTables_scrollHead table.dataTable thead th,
+        .dataTables_scrollHead table.dataTable thead td {
             background: #f8fafc;
             color: #475569;
             font-weight: 500;
@@ -98,10 +97,24 @@
             letter-spacing: 0.05em;
             text-transform: uppercase;
             border-bottom: 1px solid #e2e8f0 !important;
+            white-space: nowrap;
         }
+
+        /* Force both the header inner div and its table to full width
+           so they always match the body table — fixes the last-column drift */
+        .dataTables_scrollHeadInner,
+        .dataTables_scrollHeadInner > table {
+            width: 100% !important;
+        }
+
+        .dataTables_scrollHead { overflow: hidden !important; }
+        .dataTables_scrollBody { overflow-y: auto !important; overflow-x: hidden !important; }
         table.dataTable tbody tr:hover { background: #f8fafc; }
         table.dataTable tbody td { border-bottom: 1px solid #f1f5f9; }
     </style>
+
+    <!-- CSRF token for AJAX calls -->
+    <script>var my_crsf_token = '{{ csrf_token }}';</script>
 
     {% block extra_css %}{% endblock %}
 </head>

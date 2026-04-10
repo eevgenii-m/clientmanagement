@@ -21,7 +21,8 @@ def form_all_clients_data():
         return None
     result = []
     for cl in all_clients:
-        result.append({'clientobj': cl, 'clientname':cl.name, 'clientphonenumber':cl.phone})
+        person_emails = ' '.join(filter(None, cl.employees.values_list('email', flat=True)))
+        result.append({'clientobj': cl, 'clientname': cl.name, 'clientphonenumber': cl.phone, 'person_emails': person_emails})
     return result
 
 

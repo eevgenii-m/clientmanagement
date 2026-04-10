@@ -1,11 +1,9 @@
- {% extends "_base.html" %} {% load static %} {% block bodysec %}
-<div class="row">
-    <div class="columns align-center small-0 medium-1 large-2">
-    </div>
-    <div class="columns align-center small-12 medium-10 large-8 container-padded">
-        {% block body %} {% endblock %}
-    </div>
-    <div class="columns align-center small-0 medium-1 large-2 container-padded">
-    </div>
+{% extends "_base.html" %}
+{% load static %}
+
+{# Normal centred layout — max-w-5xl (≈1024px). Use for most list and detail pages. #}
+{% block bodysec %}
+<div class="max-w-5xl mx-auto">
+    {% block body %}{% endblock %}
 </div>
 {% endblock %}

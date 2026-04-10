@@ -1,9 +1,16 @@
 <tr id="{{ obj.id }}">
-    <td>{{ name }}</td>
-    <td>{% if phonenumber %}
-    {% include "views/components/phonenumber.html" with phone=phonenumber %}
-    {% endif %}</td>
-    <td>
-        <a class="button round nomargin margin-sides" href="{% url 'oneclient' clientid=obj.id %}">View client</a>
+    <td class="font-medium text-slate-800">{{ name }}</td>
+    <td class="text-slate-600">
+        {% if phonenumber %}
+        {% include "views/components/phonenumber.html" with phone=phonenumber %}
+        {% endif %}
     </td>
+    <td>
+        <a href="{% url 'oneclient' clientid=obj.id %}"
+           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+            View
+        </a>
+    </td>
+    {# Hidden email column — DataTables reads this for search; visible:false in DataTable config hides it #}
+    <td>{% for p in obj.employees.all %}{% if p.email %}{{ p.email }} {% endif %}{% endfor %}</td>
 </tr>
