@@ -1,9 +1,0 @@
-{% extends "_base.html" %}
-{% load static %}
-
-{# Narrow centred layout — max-w-2xl (≈672px). Use for login, forms, single-item views. #}
-{% block bodysec %}
-<div class="max-w-2xl mx-auto">
-    {% block body %}{% endblock %}
-</div>
-{% endblock %}
