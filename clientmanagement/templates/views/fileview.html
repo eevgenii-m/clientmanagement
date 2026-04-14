@@ -1,0 +1,218 @@
+{% extends "_basewide.html" %}
+
+{% block page_title %}{{ file.filename_display }}{% endblock %}
+
+{% block body %}
+
+<!-- Sticky action bar -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
+<div class="max-w-5xl mx-auto flex items-center gap-3">
+
+    <a href="{% url 'all_shared_files' %}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mr-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        All files
+    </a>
+
+    <span class="text-sm font-semibold text-slate-800 truncate max-w-xs">{{ file.filename_display }}</span>
+
+    <div class="flex-1"></div>
+
+    <!-- Copy link -->
+    <button id="copy-btn"
+            onclick="copyLink(this, '{{ request.scheme }}://{{ request.get_host }}{% url 'download_shared_file' fileuuid=file.unid %}')"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+        Copy link
+    </button>
+
+    <!-- Edit -->
+    <a href="{% url 'shared_file_edit' fileuuid=file.unid %}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+        Edit
+    </a>
+
+    <!-- Delete -->
+    <form method="POST" action="{% url 'delete_shared_file' fileid=file.id %}" class="inline">
+        {% csrf_token %}
+        <button type="button"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                onclick="if(confirm('Delete \'{{ file.filename_display }}\'? This cannot be undone.')) this.closest('form').submit()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            Delete
+        </button>
+    </form>
+
+</div>
+</div>
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <!-- File info card -->
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 class="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-4">File Details</h2>
+
+        <dl class="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-3">
+
+            <div>
+                <dt class="text-xs font-medium text-slate-500">Filename</dt>
+                <dd class="mt-1 text-sm text-slate-800 font-medium break-all">{{ file.filename_display }}</dd>
+            </div>
+
+            <div>
+                <dt class="text-xs font-medium text-slate-500">File size</dt>
+                <dd class="mt-1 text-sm text-slate-800">{{ file.file_size_display }}</dd>
+            </div>
+
+            <div>
+                <dt class="text-xs font-medium text-slate-500">Uploaded by</dt>
+                <dd class="mt-1 text-sm text-slate-800">
+                    {% if file.uploaded_by %}{{ file.uploaded_by.get_full_name|default:file.uploaded_by.username }}{% else %}<span class="text-slate-400">—</span>{% endif %}
+                </dd>
+            </div>
+
+            <div>
+                <dt class="text-xs font-medium text-slate-500">Uploaded on</dt>
+                <dd class="mt-1 text-sm text-slate-800 tabular-nums">{{ file.createdon|date:"Y-m-d H:i" }}</dd>
+            </div>
+
+            <div>
+                <dt class="text-xs font-medium text-slate-500">Expires on</dt>
+                <dd class="mt-1 text-sm tabular-nums {% if file.is_expired %}text-red-600 font-medium{% else %}text-slate-800{% endif %}">
+                    {% if file.expireon %}
+                        {{ file.expireon|date:"Y-m-d" }}
+                        {% with days=file.days_left %}
+                        {% if days < 0 %}
+                            <span class="ml-1 text-xs font-medium text-red-600">Expired</span>
+                        {% elif days == 0 %}
+                            <span class="ml-1 text-xs font-medium text-amber-600">Today</span>
+                        {% elif days <= 3 %}
+                            <span class="ml-1 text-xs font-medium text-amber-500">({{ days }}d left)</span>
+                        {% else %}
+                            <span class="ml-1 text-xs font-medium text-emerald-600">({{ days }}d left)</span>
+                        {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        <span class="text-slate-400">Never</span>
+                    {% endif %}
+                </dd>
+            </div>
+
+            <div>
+                <dt class="text-xs font-medium text-slate-500">Downloads</dt>
+                <dd class="mt-1 text-sm text-slate-800 tabular-nums">
+                    {{ file.downloads }}
+                    {% if file.max_downloads %}
+                        <span class="text-slate-400">/ {{ file.max_downloads }}</span>
+                        {% if file.is_download_limit_reached %}
+                            <span class="ml-1 text-xs font-medium text-red-600">Limit reached</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-slate-400 text-xs ml-1">(unlimited)</span>
+                    {% endif %}
+                </dd>
+            </div>
+
+            {% if file.description %}
+            <div class="col-span-2 sm:col-span-3">
+                <dt class="text-xs font-medium text-slate-500">Description</dt>
+                <dd class="mt-1 text-sm text-slate-800">{{ file.description }}</dd>
+            </div>
+            {% endif %}
+
+        </dl>
+
+        <!-- Public download link -->
+        <div class="mt-5 pt-5 border-t border-slate-100">
+            <dt class="text-xs font-medium text-slate-500 mb-1.5">Public download link</dt>
+            <div class="flex items-center gap-2">
+                <code class="flex-1 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 font-mono break-all">{{ request.scheme }}://{{ request.get_host }}{% url 'download_shared_file' fileuuid=file.unid %}</code>
+                <button onclick="copyLink(document.getElementById('copy-btn'), '{{ request.scheme }}://{{ request.get_host }}{% url 'download_shared_file' fileuuid=file.unid %}')"
+                        class="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    Copy
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Download log -->
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-800">Download Log</h2>
+            <span class="text-xs text-slate-400">Last 50 entries</span>
+        </div>
+
+        {% if logs %}
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-slate-100">
+                    <th class="text-left text-xs font-medium text-slate-500 px-6 py-3 uppercase tracking-wider">Downloaded at</th>
+                    <th class="text-left text-xs font-medium text-slate-500 px-6 py-3 uppercase tracking-wider">IP address</th>
+                    <th class="text-left text-xs font-medium text-slate-500 px-6 py-3 uppercase tracking-wider">User agent</th>
+                    <th class="text-left text-xs font-medium text-slate-500 px-6 py-3 uppercase tracking-wider">Referer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-3 text-slate-600 tabular-nums whitespace-nowrap">{{ log.downloaded_at|date:"Y-m-d H:i" }}</td>
+                    <td class="px-6 py-3 text-slate-600 tabular-nums whitespace-nowrap">{{ log.ip_address|default:"—" }}</td>
+                    <td class="px-6 py-3 text-slate-500 max-w-xs">
+                        <span title="{{ log.user_agent }}">{{ log.user_agent|truncatechars:60 }}</span>
+                    </td>
+                    <td class="px-6 py-3 text-slate-500 max-w-xs">
+                        <span title="{{ log.referer }}">{{ log.referer|truncatechars:50|default:"—" }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-12 text-center">
+            <svg class="w-8 h-8 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            <p class="text-sm text-slate-400">No downloads yet</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_javascript %}
+<script>
+function copyLink(btn, url) {
+    navigator.clipboard.writeText(url).then(function() {
+        var origHTML = btn.innerHTML;
+        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!';
+        btn.classList.add('text-emerald-600', 'border-emerald-200');
+        btn.classList.remove('text-slate-700', 'border-slate-200');
+        setTimeout(function() {
+            btn.innerHTML = origHTML;
+            btn.classList.remove('text-emerald-600', 'border-emerald-200');
+            btn.classList.add('text-slate-700', 'border-slate-200');
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

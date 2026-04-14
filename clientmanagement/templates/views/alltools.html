@@ -1,45 +1,156 @@
-{% extends "_basewide.html" %}{% load static %} {% block extra_css %}{% endblock %}{% block extra_javascript %}{% endblock %}
+{% extends "_basenorm.html" %}
+{% load static %}
+
+{% block page_title %}Tools{% endblock %}
+
+{% block extra_css %}
+<style>
+    html, body { overflow: hidden; height: 100%; }
+
+    /* Fixed column layout so widths are honoured by both header and body tables */
+    #toolstable,
+    .dataTables_scrollHead table {
+        table-layout: fixed !important;
+        width: 100% !important;
+    }
+
+    /* Column widths (set on header; body table inherits via table-layout:fixed) */
+    #toolstable th:nth-child(1) { width: 20%; }   /* Name        */
+    #toolstable th:nth-child(2) { width: 17%; }   /* Link        */
+    #toolstable th:nth-child(3) { width: 22%; }   /* Description */
+    #toolstable th:nth-child(4) { width: 16%; }   /* Visibility  */
+    #toolstable th:nth-child(5) { width: 13%; }   /* Created on  */
+    #toolstable th:nth-child(6) { width: 12%; }   /* Actions     */
+
+    /* Clamp inner div to 2 lines — on <div> inside <td>, NOT on <td> itself */
+    #toolstable .cell-clamp {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+</style>
+{% endblock %}
+
 {% block body %}
-<h2>{{ subtittle }}</h2>
-<div class='row'>
-<div class='column small-4 medium-3 large-2'><a class='button round' href="{% url 'all_tools' tool_type='' %}">All tools</a></div>
-<div class='column small-4 medium-3 large-2'><a class='button round' href="{% url 'all_tools' tool_type='f' %}">File tools</a></div>
-<div class='column small-4 medium-3 large-2'><a class='button round' href="{% url 'all_tools' tool_type='l' %}">Link tools</a></div>
-<div class='column'></div>
+
+{% with cur_type=request.resolver_match.kwargs.tool_type %}
+
+<!-- Sticky header -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-4">
+    <div class="max-w-5xl mx-auto flex items-center gap-3 flex-wrap">
+
+        <!-- Title -->
+        <div class="min-w-0 shrink-0">
+            <h1 class="text-xl font-semibold text-slate-800 leading-tight">Tools</h1>
+            <p class="text-xs text-slate-500">Links and files</p>
+        </div>
+
+        <!-- Filter tabs: All / Links / Files -->
+        <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shrink-0">
+            <a href="{% url 'all_tools' tool_type='' %}"
+               class="px-3 py-1 text-xs font-medium rounded-md transition-colors
+                      {% if cur_type == '' or cur_type == None %}bg-blue-600 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+                All
+            </a>
+            <a href="{% url 'all_tools' tool_type='l' %}"
+               class="px-3 py-1 text-xs font-medium rounded-md transition-colors
+                      {% if cur_type == 'l' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+                Links
+            </a>
+            <a href="{% url 'all_tools' tool_type='f' %}"
+               class="px-3 py-1 text-xs font-medium rounded-md transition-colors
+                      {% if cur_type == 'f' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
+                Files
+            </a>
+        </div>
+
+        <!-- Search -->
+        <div class="flex-1 relative min-w-[160px]">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+            </svg>
+            <input type="search" id="tools-search"
+                   placeholder="Search tools…"
+                   class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 font-sans transition-colors">
+        </div>
+
+        <!-- Add buttons (authenticated only) -->
+        {% if user.is_authenticated %}
+        <a href="{% url 'new_tool' tool_type='l' %}"
+           class="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Add Link
+        </a>
+        <a href="{% url 'new_tool' tool_type='f' %}"
+           class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Add File
+        </a>
+        {% endif %}
+
+    </div>
 </div>
-<table id='ticket_table'>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Link</th>
-            <th class="hide-for-small-only">Description</th>
-            <th class="show-for-large-up">Created on</th>
-            {% if user.is_authenticated %}
-            <th>Visibility</th>
-            <th>Accessible</th>
-            <th>Actions</th>
-            {% endif %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for tool in tools %} {% include "views/oneitemrow/onetoolrow.html" with toolt=tool.tool_type %} {% endfor %}
-    </tbody>
-</table>
-{% if user.is_authenticated %}
-<div class='row'>
-<div class='column'></div>
-<div class='column small-4 medium-3 large-2'><a class='button round' href="{% url 'new_tool' tool_type='f' %}">Add file tool</a></div>
-<div class='column small-4 medium-3 large-2'><a class='button round' href="{% url 'new_tool' tool_type='l' %}">Add link tool</a></div>
-<div class='column'></div>
+
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <table id="toolstable" class="w-full">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th class="hidden md:table-cell">Link</th>
+                <th class="hidden md:table-cell">Description</th>
+                <th class="hidden md:table-cell">Visibility</th>
+                <th>Created on</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tool in tools %}
+            {% include "views/oneitemrow/onetoolrow.html" with toolt=tool.tool_type_field %}
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
-{% endif %}
+
+{% if needdatatables %}
 <script>
     $(document).ready(function() {
-        document.userstable = $('#ticket_table').DataTable({
-            "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ],
-            "iDisplayLength": -1,
-            "order": []
+        var dt = $('#toolstable').DataTable({
+            "paging": false,
+            "info": false,
+            "searching": true,
+            "dom": "t",
+            "scrollY": "300px",
+            "scrollCollapse": true,
+            "autoWidth": false,
+            "order": [[4, "desc"]],
+            "columnDefs": [
+                { "orderable": false, "targets": [1, 2, 5] }
+            ]
         });
+
+        $('#tools-search').on('input', function() {
+            dt.search(this.value).draw();
+        });
+
+        function fitTable() {
+            var scrollBody = $('#toolstable').closest('.dataTables_wrapper').find('.dataTables_scrollBody');
+            if (!scrollBody.length) return;
+            var top = scrollBody.offset().top;
+            var h = window.innerHeight - top - 8;
+            scrollBody.css({ 'height': h + 'px', 'max-height': h + 'px' });
+        }
+        fitTable();
+        $(window).on('resize', fitTable);
     });
 </script>
+{% endif %}
+
+{% endwith %}
 {% endblock %}

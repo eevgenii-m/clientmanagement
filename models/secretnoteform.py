@@ -1,23 +1,25 @@
 from django import forms
 from models import secretnote
 from clientmanagement import views as main_views, modelgetters, error_views
-from clientmanagement.widget import quill
 from django.urls import reverse
 from django.shortcuts import render, redirect
 from datetime import datetime, timedelta
-from phonenumber_field.formfields import PhoneNumberField
 import collections, copy
 
 
 class SecretNoteForm(forms.ModelForm):
-    note_text = quill.QuillField(label="Secret note text*")
+    note_text = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 10, 'style': 'resize: vertical;'}),
+        label="Secret note text",
+        required=False,
+    )
     order = ('contactemail', 'reads_max', 'expireon', 'subject', 'note_text')
     class Meta:
         model = secretnote.SecretNote
         fields = ('contactemail', 'reads_max', 'expireon', 'subject', 'note_text')
         widgets = {
             'expireon': forms.SelectDateWidget,
-        }   
+        }
 
     def __init__(self, *args, **kwargs):
         super(SecretNoteForm, self).__init__(*args, **kwargs)
@@ -105,7 +107,7 @@ def SecretNoteFormParse(request):
         data['backurl'] = reverse('all_notes')
     data['form'] = form
     data['built'] = datetime.now().strftime("%H:%M:%S")
-    data['needquillinput'] = True
+    data['needeasymde'] = True
     return render(request, 'forms/unimodelform.html', data, content_type='text/html')
 
 
@@ -117,7 +119,7 @@ def AllSecretNotes(request, reqtype):
     if data is None:
         data = {}
     show_available = reqtype == '' or reqtype == 'a'
-    show_unavailable = reqtype == 'u' or reqtype == 'a'      
+    show_unavailable = reqtype == 'u' or reqtype == 'a'
     data['needdatatables'] = True
     data['PAGE_TITLE'] = 'Secret Notes: CMS infotek'
     data['built'] = datetime.now().strftime("%H:%M:%S")
@@ -135,7 +137,7 @@ def SecretNoteViewInternal(request, noteid):
         return error_views.notfound(request)
     data['PAGE_TITLE'] = 'Secret Note: CMS infotek'
     data['built'] = datetime.now().strftime("%H:%M:%S")
-    data['needquillinput'] = True
+    data['needquillinput'] = True   # keep for backward-compat display of legacy Quill notes
     return render(request, 'views/secretnoteinternal.html', data, content_type='text/html')
 
 
@@ -148,6 +150,7 @@ def SecretNoteViewExternalClose(request, noteuuid):
         return error_views.notfound(request)
     data['PAGE_TITLE'] = 'Secret Note: CMS infotek'
     data['built'] = datetime.now().strftime("%H:%M:%S")
+    # Quill CSS/JS loaded conditionally in the template based on note content type
     return render(request, 'views/secretnoteclose.html', data, content_type='text/html')
 
 
@@ -160,5 +163,4 @@ def SecretNoteViewExternalOpen(request, noteuuid):
         return error_views.notfound(request)
     data['PAGE_TITLE'] = 'Secret Note: CMS infotek'
     data['built'] = datetime.now().strftime("%H:%M:%S")
-    data['needquillinput'] = True
     return render(request, 'views/secretnoteopen.html', data, content_type='text/html')

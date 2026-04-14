@@ -1,0 +1,42 @@
+{% extends "_basenarrow.html" %}
+
+{% block page_title %}File Unavailable{% endblock %}
+
+{% block body %}
+
+<div class="flex flex-col items-center justify-center py-20 text-center">
+
+    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-6">
+        <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+        </svg>
+    </div>
+
+    {% if reason == 'expired' %}
+    <h1 class="text-xl font-semibold text-slate-800 mb-2">This file has expired</h1>
+    <p class="text-sm text-slate-500 max-w-sm">The download link for this file has passed its expiry date and is no longer available.</p>
+    {% elif reason == 'limit_reached' %}
+    <h1 class="text-xl font-semibold text-slate-800 mb-2">Download limit reached</h1>
+    <p class="text-sm text-slate-500 max-w-sm">This file has reached its maximum number of downloads and is no longer available.</p>
+    {% elif reason == 'not_found' %}
+    <h1 class="text-xl font-semibold text-slate-800 mb-2">File not found</h1>
+    <p class="text-sm text-slate-500 max-w-sm">This file does not exist or has been deleted.</p>
+    {% else %}
+    <h1 class="text-xl font-semibold text-slate-800 mb-2">File unavailable</h1>
+    <p class="text-sm text-slate-500 max-w-sm">This file could not be retrieved. It may have been moved or deleted.</p>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <a href="{% url 'all_shared_files' %}"
+       class="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Files
+    </a>
+    {% endif %}
+
+</div>
+
+{% endblock %}

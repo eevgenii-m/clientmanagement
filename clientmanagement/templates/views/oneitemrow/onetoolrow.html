@@ -1,17 +1,55 @@
-<tr id="{{ tool.id }}">
-    <td>{{ tool.get_name_for_user }}</td>
-    <td><a href="{{ tool.get_link }}" target="_blank">{{ tool.get_link_text }}</a></td>
-    <td class="hide-for-small-only">{{ tool.description|linebreaksbr }}</td>
-    <td class="show-for-large-up">{{ tool.createtime|date:"Y-m-d h:i a" }} </td>
-    {% if user.is_authenticated %}
-    <td class="show-for-large-up">{% if tool.public %}{% if tool.publicinlist %}Public{% else %}Private{% endif %}{% else %}Private{% endif %}</td>
-    <td class="show-for-large-up">{% if tool.public %}Public{% else %}Private{% endif %}</td>
-    <td><form action="{% url 'new_tool' tool_type=toolt %}"  method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="change">
-        <input type="hidden" name="targetid" value="{{ tool.id }}">
-        <a id="change_tool_button_{{tool.id}}" class="button round inlineblock" onclick="this.parentElement.submit();">Change tool info</a>
-    </form>
+<tr id="{{ tool.id }}" class="hover:bg-slate-50 transition-colors">
+
+    <!-- Name — 2-line clamp via inner div -->
+    <td class="font-medium text-slate-800" title="{{ tool.get_name_for_user }}">
+        <div class="cell-clamp">{{ tool.get_name_for_user }}</div>
     </td>
-    {% endif %}
+
+    <!-- Link — 2-line clamp via inner div -->
+    <td title="{{ tool.get_link }}" class="hidden md:table-cell">
+        {% if tool.get_link %}
+        <div class="cell-clamp">
+            <a href="{{ tool.get_link }}" target="_blank"
+               class="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                {{ tool.get_link_text }}
+            </a>
+        </div>
+        {% else %}
+        <span class="text-sm text-slate-400">—</span>
+        {% endif %}
+    </td>
+
+    <!-- Description — 2-line clamp via inner div -->
+    <td title="{{ tool.description }}" class="hidden md:table-cell">
+        <div class="cell-clamp text-sm text-slate-500">{{ tool.description }}</div>
+    </td>
+
+    <!-- Visibility -->
+    <td class="hidden md:table-cell">
+        {% if user.is_authenticated %}
+            {% if tool.public %}
+                {% if tool.publicinlist %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Public / In list</span>
+                {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">Public / Hidden</span>
+                {% endif %}
+            {% else %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">Private</span>
+            {% endif %}
+        {% endif %}
+    </td>
+
+    <!-- Created on -->
+    <td class="text-sm text-slate-500 tabular-nums">{{ tool.createdon|date:"Y-m-d" }}</td>
+
+    <!-- Actions -->
+    <td>
+        {% if user.is_authenticated %}
+        <a href="{% url 'tool_view' toolid=tool.id %}"
+           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+            View
+        </a>
+        {% endif %}
+    </td>
+
 </tr>

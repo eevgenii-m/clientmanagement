@@ -1,6 +1,6 @@
 from django import forms
 from django.conf import settings
-import collections, copy, pytz
+import collections, copy, pytz, os
 from clientmanagement import views as main_views
 from django.urls import reverse
 from django.shortcuts import render, redirect
@@ -24,10 +24,10 @@ class FileToolForm(forms.ModelForm):
         fields = ("name", "public", "publicinlist", "version", "uplfile", "description")
         widgets = {
             'uplfile': clear_file_input.ClearFileInput,
-        }    
+        }
 
-    def __init__(self, *args, **kwargs): 
-        form = super(FileToolForm, self).__init__(*args, **kwargs) 
+    def __init__(self, *args, **kwargs):
+        form = super(FileToolForm, self).__init__(*args, **kwargs)
         self.fields['public'].label_classes = ('switch-paddle', 'class_b', )
         self.fields['publicinlist'].label_classes = ('switch-paddle', 'class_b', )
         instance = getattr(self, 'instance', None)
@@ -70,10 +70,10 @@ class LinkToolForm(forms.ModelForm):
         model = tools.LinkTool
         fields = ("name", "public", "publicinlist", "url", "description")
 
-    def __init__(self, *args, **kwargs): 
+    def __init__(self, *args, **kwargs):
         super(LinkToolForm, self).__init__(*args, **kwargs)
         self.fields['public'].label_classes = ('switch-paddle', 'class_b', )
-        self.fields['publicinlist'].label_classes = ('switch-paddle', 'class_b', ) 
+        self.fields['publicinlist'].label_classes = ('switch-paddle', 'class_b', )
 
         instance = getattr(self, 'instance', None)
         if instance and instance.id:
@@ -81,10 +81,9 @@ class LinkToolForm(forms.ModelForm):
             self.inf_action='changed'
             self.inf_minititle = 'Change a link to a tool'
             self.inf_delete_button = "Delete tool"
-            
 
 
-def ToolFormParser(request, form_type):    
+def ToolFormParser(request, form_type):
     valid, response = main_views.initRequest(request)
     if not valid:
         return response
@@ -102,7 +101,7 @@ def ToolFormParser(request, form_type):
             if form.is_valid():
                 model = form.save(commit=False)
                 model.save()
-                return redirect(back_link)
+                return redirect(reverse('tool_view', kwargs={'toolid': model.id}))
         elif (request.POST['action']=='change'):
             if('targetid' in request.POST):
                 try:
@@ -110,6 +109,14 @@ def ToolFormParser(request, form_type):
                 except Exception:
                     return redirect(back_link)
             form = form_class(instance=curobj)
+            # Pass file warning context for file tools with an existing file
+            if form_type == 'f' and curobj.uplfile:
+                try:
+                    if os.path.exists(curobj.uplfile.path):
+                        data['has_existing_file'] = True
+                        data['existing_file_name'] = os.path.basename(curobj.uplfile.name)
+                except Exception:
+                    pass
         elif (request.POST['action']=='changed'):
             if('targetid' in request.POST):
                 try:
@@ -120,7 +127,15 @@ def ToolFormParser(request, form_type):
             if form.is_valid():
                 model = form.save(commit=False)
                 model.save()
-                return redirect(back_link)
+                return redirect(reverse('tool_view', kwargs={'toolid': model.id}))
+            # Re-populate file warning if invalid
+            if form_type == 'f':
+                try:
+                    if curobj.uplfile and os.path.exists(curobj.uplfile.path):
+                        data['has_existing_file'] = True
+                        data['existing_file_name'] = os.path.basename(curobj.uplfile.name)
+                except Exception:
+                    pass
         elif (request.POST['action']=='delete'):
             if('targetid' in request.POST):
                 try:
@@ -144,3 +159,21 @@ def ToolFormParser(request, form_type):
     data['form'] = form
     data['built'] = datetime.now().strftime("%H:%M:%S")
     return render(request, 'forms/unimodelform.html', data, content_type='text/html')
+
+
+def ToolViewParser(request, toolid):
+    valid, response = main_views.initRequest(request)
+    if not valid:
+        return response
+    try:
+        tool = tools.MainTool.objects.get(id=toolid)
+    except tools.MainTool.DoesNotExist:
+        from django.shortcuts import redirect
+        return redirect(reverse('all_tools', kwargs={'tool_type': ''}))
+    from datetime import datetime
+    data = {
+        'tool': tool,
+        'PAGE_TITLE': tool.get_name_for_user() + ': CMS infotek',
+        'built': datetime.now().strftime("%H:%M:%S"),
+    }
+    return render(request, 'views/toolview.html', data, content_type='text/html')

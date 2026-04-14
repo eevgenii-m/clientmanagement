@@ -1,7 +1,10 @@
-<tr id="{{ art.id }}">
-    <td>{{ art.title }}</td>
-    <td>{{ art.updatedon|date:"Y-m-d" }}</td>
+<tr id="{{ art.id }}" class="hover:bg-slate-50 transition-colors">
+    <td class="font-medium text-slate-800">{{ art.title }}</td>
+    <td class="text-slate-500 text-sm tabular-nums">{{ art.updatedon|date:"Y-m-d" }}</td>
     <td>
-        <a class="button round nomargin margin-sides" href="{{ art.get_link }}">View article</a>
+        <a href="{{ art.get_link }}"
+           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+            View
+        </a>
     </td>
 </tr>

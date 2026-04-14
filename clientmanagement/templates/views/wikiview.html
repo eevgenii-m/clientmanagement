@@ -1,19 +1,140 @@
-{% extends "_basewide.html" %}{% load static %} {% block extra_css %}
-<style>@media print{
-    header, footer, .button { display: none; }
-    .post-bordered { border: 0px}
-}
-</style>{% endblock %}{% block extra_javascript %}{% endblock %}
-{% block body %}
-<div class="post-bordered">
-<h3>{{ article.title }}</h3>
-<p><b>Created on:</b> {{ article.updatedon|date:"Y-m-d h:i a" }}</p>
-{% include "forms/widget/maybequill.html" with obj=article.get_quill_object %}<br>
+{% extends "_basewide.html" %}
+{% load static %}
 
-<form action="{% url 'wiki_new' %}"  method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="change">
-    <input type="hidden" name="targetid" value="{{ article.id }}">
-    <a id="change-button-{{article.id}}" class="button round inlineblock" onclick="this.parentElement.submit();">Change article</a>
-</form>
+{% block page_title %}{{ article.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        /* Hide all shell chrome — sidebar, topbar, footer, action bar */
+        aside, header, footer,
+        .no-print { display: none !important; }
+
+        /* Remove sidebar margin so content fills full page width */
+        body, div[class*="lg:ml-"] { margin-left: 0 !important; }
+
+        /* Article card: no border/shadow, full width */
+        .print-content {
+            border: none !important;
+            box-shadow: none !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+        }
+
+        /* Ensure page scrolls for multi-page print */
+        html, body { overflow: visible !important; height: auto !important; }
+    }
+
+    /* Article body typography — used for both Quill and Markdown rendered output */
+    .wiki-body { font-size: 0.9375rem; line-height: 1.7; color: #334155; }
+    .wiki-body h1 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.6rem; color: #1e293b; }
+    .wiki-body h2 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.5rem; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.3rem; }
+    .wiki-body h3 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 0.4rem; color: #334155; }
+    .wiki-body p  { margin-bottom: 0.85rem; }
+    .wiki-body ul, .wiki-body ol { margin: 0.5rem 0 0.85rem 1.5rem; }
+    .wiki-body li { margin-bottom: 0.3rem; }
+    .wiki-body a  { color: #2563eb; text-decoration: underline; }
+    .wiki-body a:hover { color: #1d4ed8; }
+    .wiki-body blockquote { border-left: 3px solid #cbd5e1; padding: 0.5rem 0 0.5rem 1rem; color: #64748b; margin: 0.75rem 0; background: #f8fafc; border-radius: 0 6px 6px 0; }
+    .wiki-body pre { padding: 1rem; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; margin-bottom: 0.85rem; }
+    .wiki-body pre code { background: none; padding: 0; border-radius: 0; font-size: 0.85rem; }
+    .wiki-body code { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px; }
+    .wiki-body table { width: 100%; border-collapse: collapse; margin-bottom: 0.85rem; }
+    .wiki-body th { background: #f8fafc; font-weight: 500; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; font-size: 0.8125rem; color: #475569; text-transform: uppercase; letter-spacing: 0.03em; }
+    .wiki-body td { padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: top; }
+    .wiki-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 1.5rem 0; }
+    .wiki-body img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+<!-- Sticky action bar — stays at top while article scrolls -->
+<div class="no-print sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
+<div class="max-w-5xl mx-auto flex items-center gap-3">
+
+    <!-- Back link -->
+    <a href="{% url 'all_wiki' %}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mr-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        All articles
+    </a>
+
+    <!-- Spacer -->
+    <div class="flex-1"></div>
+
+    <!-- Print / Save as PDF -->
+    <button onclick="window.print()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+        </svg>
+        Print / PDF
+    </button>
+
+    <!-- Edit article -->
+    <form action="{% url 'wiki_new' %}" method="POST" enctype="multipart/form-data" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="change">
+        <input type="hidden" name="targetid" value="{{ article.id }}">
+        <button type="submit"
+                class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            Edit article
+        </button>
+    </form>
+</div>
+</div>
+
+<!-- Article card -->
+<div class="bg-white rounded-xl border border-slate-200 p-8 print-content max-w-5xl mx-auto">
+
+    <!-- Title + meta -->
+    <div class="mb-6 pb-5 border-b border-slate-100">
+        <h1 class="text-2xl font-semibold text-slate-800 leading-snug">{{ article.title }}</h1>
+        <p class="text-sm text-slate-500 mt-1.5">Updated {{ article.updatedon|date:"N j, Y, H:i" }}</p>
+
+        {% if article.keywords.all %}
+        <div class="flex flex-wrap gap-1.5 mt-3">
+            {% for kw in article.keywords.all %}
+            <span class="inline-block px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full">{{ kw.word }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Article body — Quill (legacy) or Markdown -->
+    {% if article.get_quill_object.is_quill_content %}
+    {# Old article: stored as Quill JSON delta — render with existing Quill pipeline #}
+    <div class="wiki-body">
+        {% include "forms/widget/maybequill.html" with obj=article.get_quill_object %}
+    </div>
+
+    {% else %}
+    {# New article: stored as plain Markdown — render with marked.js #}
+    <div id="article-content" class="wiki-body"></div>
+    {% endif %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_javascript %}
+{% if not article.get_quill_object.is_quill_content %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    marked.setOptions({
+        breaks: true,      // treat single newlines as <br>
+        gfm: true,         // GitHub Flavored Markdown
+    });
+    var rawMarkdown = "{{ article.article|escapejs }}";
+    document.getElementById('article-content').innerHTML = marked.parse(rawMarkdown);
+</script>
+{% endif %}
 {% endblock %}

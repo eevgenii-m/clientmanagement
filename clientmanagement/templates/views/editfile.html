@@ -1,0 +1,140 @@
+{% extends "_basenarrow.html" %}
+
+{% block page_title %}Edit File{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tw-form p { margin-bottom: 1.25rem; }
+
+    .tw-form label {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: #475569;
+        margin-bottom: 0.3rem;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .tw-form input[type="text"],
+    .tw-form input[type="number"],
+    .tw-form select,
+    .tw-form textarea {
+        display: block;
+        width: 100%;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.875rem;
+        color: #1e293b;
+        background: #ffffff;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .tw-form input:focus,
+    .tw-form select:focus,
+    .tw-form textarea:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .tw-form .helptext {
+        display: block;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        margin-top: 0.25rem;
+    }
+
+    .readonly-field {
+        display: block;
+        width: 100%;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.875rem;
+        color: #64748b;
+        background: #f8fafc;
+        font-family: 'DM Sans', sans-serif;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+
+<!-- Sticky action bar -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
+<div class="max-w-2xl mx-auto flex items-center gap-3">
+
+    <a href="{% url 'shared_file_view' fileuuid=file.unid %}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mr-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back
+    </a>
+
+    <span class="text-sm font-semibold text-slate-800 truncate">Edit File</span>
+
+    <div class="flex-1"></div>
+
+    <a href="{% url 'shared_file_view' fileuuid=file.unid %}"
+       class="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+        Cancel
+    </a>
+
+    <button type="submit" form="edit-form"
+            class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Save
+    </button>
+
+</div>
+</div>
+
+<!-- Form card -->
+<div class="bg-white rounded-xl border border-slate-200 p-6">
+    <form method="POST" class="tw-form" autocomplete="off" id="edit-form">
+        {% csrf_token %}
+
+        <!-- Filename (read-only) -->
+        <p>
+            <label>Filename</label>
+            <span class="readonly-field">{{ file.filename_display }}</span>
+            <span class="helptext">File cannot be replaced after upload.</span>
+        </p>
+
+        <!-- Description -->
+        <p>
+            <label for="id_description">Description (optional)</label>
+            <input type="text" id="id_description" name="description"
+                   value="{{ file.description|default:'' }}" maxlength="300">
+        </p>
+
+        <!-- Expires in days -->
+        <p>
+            <label for="id_expires_days">Extend expiry (days from today)</label>
+            <input type="number" id="id_expires_days" name="expires_days"
+                   min="1" max="90" placeholder="Leave blank to remove expiry"
+                   value="{{ days_remaining }}">
+            <span class="helptext">
+                Current expiry: {% if file.expireon %}{{ file.expireon|date:"Y-m-d" }}{% else %}None{% endif %}.
+                Enter days from today to set a new expiry (1–90), or leave blank to remove expiry.
+            </span>
+        </p>
+
+        <!-- Max downloads -->
+        <p>
+            <label for="id_max_downloads">Download limit (optional)</label>
+            <input type="number" id="id_max_downloads" name="max_downloads"
+                   min="1" placeholder="Unlimited"
+                   value="{{ file.max_downloads|default:'' }}">
+            <span class="helptext">Leave blank for unlimited downloads. Current: {{ file.downloads }} used.</span>
+        </p>
+
+    </form>
+</div>
+
+{% endblock %}

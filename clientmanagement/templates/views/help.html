@@ -1,0 +1,232 @@
+{% extends "_basenorm.html" %}
+
+{% block page_title %}Help{% endblock %}
+
+{% block extra_css %}
+<style>
+    .help-body { font-size: 0.9375rem; line-height: 1.75; color: #334155; }
+    .help-body h1 { font-size: 1.75rem; font-weight: 700; margin: 0 0 0.4rem; color: #1e293b; }
+    .help-body h2 { font-size: 1.2rem; font-weight: 700; margin: 2rem 0 0.6rem; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem; }
+    .help-body h3 { font-size: 1rem; font-weight: 600; margin: 1.25rem 0 0.35rem; color: #334155; }
+    .help-body p  { margin-bottom: 0.75rem; }
+    .help-body ul, .help-body ol { margin: 0.4rem 0 0.75rem 1.5rem; }
+    .help-body li { margin-bottom: 0.3rem; }
+    .help-body a  { color: #2563eb; text-decoration: underline; }
+    .help-body a:hover { color: #1d4ed8; }
+    .help-body strong { font-weight: 600; color: #1e293b; }
+    .help-body code { font-family: 'JetBrains Mono', monospace; font-size: 0.8125rem; background: #f1f5f9; color: #0f172a; padding: 0.1rem 0.4rem; border-radius: 4px; }
+    .help-body blockquote { border-left: 3px solid #2563eb; padding: 0.5rem 0 0.5rem 1rem; color: #475569; margin: 0.75rem 0; background: #f8fafc; border-radius: 0 6px 6px 0; font-size: 0.875rem; }
+    .help-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0; }
+    .section-icon { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 8px; margin-right: 0.6rem; vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+<!-- Sticky header -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
+<div class="max-w-5xl mx-auto flex items-center gap-3">
+
+    <svg class="w-5 h-5 text-teal-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <span class="text-sm font-semibold text-slate-800">Help — Portal Guide</span>
+
+</div>
+</div>
+
+<div class="bg-white rounded-xl border border-slate-200 p-8">
+<div class="help-body" id="help-content"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_javascript %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+var helpMarkdown = `
+# Infotek IT Portal — Help Guide
+
+Welcome to the **Infotek Solutions & Support** internal portal. This guide explains every section of the portal and its features.
+
+---
+
+## 🏠 Home
+
+The **Home** page is your portal dashboard. It shows quick-access cards for all major sections. Click any card to navigate directly to that section.
+
+---
+
+## 👥 Clients
+
+The **Clients** section manages all client companies that Infotek supports.
+
+### Features
+
+- **Client list** — searchable table of all clients with phone number and quick actions
+- **Client detail** — view full information for a client including:
+  - General Info (address, phone, description)
+  - People (contacts and employees linked to that client)
+- **Add client** — create a new client record via the form
+- **Edit client** — update any client's information
+
+### How to use
+
+1. Click **Clients** in the sidebar to open the list
+2. Use the search box to filter by name, phone, or other fields
+3. Click **View** next to any client to open their detail page
+4. Use the **Edit** button on the client page to make changes
+
+---
+
+## 👤 People
+
+The **People** section lists all contacts and employees across all clients.
+
+### Features
+
+- **All people list** — searchable table showing name, company, phone, and email
+- **Person detail modal** — click **View** on any row to open a pop-up with full contact info and edit link
+- **Add person** — done from within a client's detail page (People section)
+
+### Notes
+
+- A person is always linked to a **Client** (their employer)
+- Phone numbers are clickable (tel: links)
+- Email addresses are clickable (mailto: links)
+
+---
+
+## 📚 Wiki
+
+The **Wiki** is a knowledge base for internal guides, procedures, and documentation.
+
+### Features
+
+- **Article list** — searchable table of all wiki articles sorted by last updated date
+- **Article view** — full rendered article with print / PDF support
+- **Rich text editing** — articles are written in **Markdown** with a live-preview editor (EasyMDE)
+- **Markdown import** — import \`.md\` or \`.txt\` files directly into the editor
+- **Print / PDF** — use the **Print / PDF** button on any article to generate a clean printout (sidebar and navigation are hidden automatically)
+- **Keywords** — articles can be tagged with keywords for organisation
+
+### How to write an article
+
+1. Click **+ New Article** on the Wiki list page
+2. Write content using Markdown syntax in the editor
+3. Use the toolbar for formatting shortcuts (bold, lists, headings, code blocks, etc.)
+4. Click **Save** — the article is immediately visible to all portal users
+
+### Markdown tips
+
+\`\`\`
+# Heading 1
+## Heading 2
+**bold**, *italic*, \`inline code\`
+- bullet list
+1. numbered list
+[link text](https://example.com)
+\`\`\`
+
+---
+
+## ⚙️ Tools
+
+The **Tools** section stores links and downloadable files that the team uses regularly (software installers, configuration files, reference URLs, etc.).
+
+### Features
+
+- **All tools list** — filterable by type (All / Links / Files) with search
+- **Tool detail** — shows type, link/download, description, and visibility setting
+- **Two tool types:**
+  - **Link** — a URL to an external resource or website
+  - **File** — a file upload that team members can download
+- **Visibility settings:**
+  - **Private** — only visible when logged in
+  - **Public / Hidden** — accessible via direct URL but not shown in the public list
+  - **Public / In list** — visible to anyone, including unauthenticated users
+
+### How to add a tool
+
+1. Click **Add Link** or **Add File** on the Tools page
+2. Fill in the name, URL or upload a file, and set visibility
+3. Save — the tool appears in the list immediately
+
+---
+
+## 🔒 Secret Notes
+
+**Secret Notes** are self-destructing messages that can be shared with clients or external contacts via a unique one-time link.
+
+### Features
+
+- **Time-limited** — notes can be set to expire after a certain date/time
+- **Read-limited** — notes can be configured to self-destruct after a set number of reads
+- **External access** — recipients open the note via a unique link without needing a portal account
+- **Two-step open** — the recipient first sees a gate page ("Read note now") before the note is revealed, preventing accidental exposure
+- **Admin view** — staff can view notes internally including the sharing link, expiry, and read count
+
+### How to create a secret note
+
+1. Click **New Note** on the Secret Notes page
+2. Write the note content (Markdown supported)
+3. Optionally set: recipient email, expiry date/time, maximum read count
+4. Save — copy the generated share link and send it to the recipient
+
+### Note states
+
+| State | Meaning |
+|-------|---------|
+| Available | Note is active and can be read |
+| Expired | Note passed its expiry date |
+| Limit reached | Note reached maximum reads |
+
+---
+
+## 📁 Files
+
+The **Files** section provides temporary file sharing — upload a file and share a public download link with clients or external contacts. No portal account is required to download.
+
+### Features
+
+- **Upload any file** — no file type restrictions
+- **Download limit** — optionally cap the number of times a file can be downloaded
+- **Expiry** — set an expiry date up to 90 days from today; after that the link stops working
+- **Download log** — each download is logged with timestamp, IP address, user agent, and referrer
+- **Public link** — a unique URL that anyone can use to download the file (no login required)
+- **Copy link button** — one-click copy of the download URL
+
+### How to share a file
+
+1. Click **Upload File** on the Files page
+2. Choose the file and optionally add a description, expiry (1–90 days), or download limit
+3. After upload, click **View** to open the file detail page
+4. Copy the **Public download link** and share it with the recipient
+
+### File states
+
+- **Active** — link works, file can be downloaded
+- **Expired** — expiry date has passed; link returns "File unavailable"
+- **Limit reached** — download count hit the maximum; link returns "Download limit reached"
+
+---
+
+## ❓ Help
+
+This page — you are reading it now. Returns here whenever you need a reminder of how any section works.
+
+---
+
+*Infotek Solutions & Support — Internal IT Portal*
+`;
+
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('help-content');
+    if (el && typeof marked !== 'undefined') {
+        marked.setOptions({ breaks: true });
+        el.innerHTML = marked.parse(helpMarkdown);
+    }
+});
+</script>
+{% endblock %}

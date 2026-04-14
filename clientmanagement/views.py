@@ -284,6 +284,14 @@ def allpeopleview(request):
 
 
 @login_required( login_url = 'login' )
+def helpview(request):
+    valid, response = initRequest(request)
+    if not valid:
+        return response
+    return render(request, 'views/help.html', {}, content_type='text/html')
+
+
+@login_required( login_url = 'login' )
 def statisticsview(request):
     valid, response = initRequest(request)
     if not valid:

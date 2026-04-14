@@ -1,0 +1,110 @@
+from django import forms
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.http import FileResponse
+from django.utils.encoding import smart_str
+from datetime import datetime
+import os, mimetypes
+
+from models import sharedfile
+from clientmanagement import views as main_views
+
+
+class SharedFileForm(forms.ModelForm):
+    class Meta:
+        model = sharedfile.SharedFile
+        fields = ('uplfile', 'description', 'expireon')
+        widgets = {
+            'expireon': forms.DateInput(attrs={'type': 'date'}),
+        }
+        labels = {
+            'uplfile': 'File',
+            'description': 'Description (optional)',
+            'expireon': 'Expires on (leave blank = never expires)',
+        }
+
+
+@login_required(login_url='login')
+def AllSharedFilesParser(request):
+    valid, response = main_views.initRequest(request)
+    if not valid:
+        return response
+    files = sharedfile.SharedFile.objects.all().order_by('-createdon')
+    data = {
+        'PAGE_TITLE': 'Shared Files: CMS infotek',
+        'files': files,
+        'needdatatables': True,
+        'built': datetime.now().strftime("%H:%M:%S"),
+    }
+    return render(request, 'views/allfiles.html', data, content_type='text/html')
+
+
+@login_required(login_url='login')
+def UploadSharedFileParser(request):
+    valid, response = main_views.initRequest(request)
+    if not valid:
+        return response
+    if request.method == 'POST':
+        form = SharedFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            sf = form.save(commit=False)
+            sf.uploaded_by = request.user
+            if request.FILES.get('uplfile'):
+                sf.original_filename = request.FILES['uplfile'].name
+            sf.save()
+            return redirect(reverse('all_shared_files'))
+    else:
+        form = SharedFileForm()
+    data = {
+        'PAGE_TITLE': 'Upload File: CMS infotek',
+        'form': form,
+        'built': datetime.now().strftime("%H:%M:%S"),
+    }
+    return render(request, 'views/uploadfile.html', data, content_type='text/html')
+
+
+def DownloadSharedFilePublic(request, fileuuid):
+    try:
+        sf = sharedfile.SharedFile.objects.get(unid=fileuuid)
+    except sharedfile.SharedFile.DoesNotExist:
+        return render(request, 'views/fileexpired.html', {'reason': 'not_found'},
+                      content_type='text/html')
+    if sf.is_expired():
+        return render(request, 'views/fileexpired.html', {'reason': 'expired'},
+                      content_type='text/html')
+    try:
+        file_path = sf.uplfile.path
+        if not os.path.exists(file_path):
+            return render(request, 'views/fileexpired.html', {'reason': 'not_found'},
+                          content_type='text/html')
+        sf.downloads += 1
+        sf.save(update_fields=['downloads'])
+        filename = sf.filename_display()
+        content_type, _ = mimetypes.guess_type(filename)
+        if content_type is None:
+            content_type = 'application/octet-stream'
+        response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+        response['Content-Disposition'] = 'attachment; filename="%s"' % smart_str(filename)
+        return response
+    except Exception:
+        return render(request, 'views/fileexpired.html', {'reason': 'error'},
+                      content_type='text/html')
+
+
+@login_required(login_url='login')
+def DeleteSharedFileView(request, fileid):
+    valid, response = main_views.initRequest(request)
+    if not valid:
+        return response
+    if request.method == 'POST':
+        try:
+            sf = sharedfile.SharedFile.objects.get(id=fileid)
+            try:
+                sf.uplfile.delete(save=False)
+            except Exception:
+                pass
+            sf.delete()
+        except sharedfile.SharedFile.DoesNotExist:
+            pass
+    return redirect(reverse('all_shared_files'))

@@ -8,7 +8,7 @@
         {% include "views/components/phonenumber.html" with phone=person.phone %}
         {% endif %}
     </td>
-    <td class="py-2.5 pr-4">
+    <td class="py-2.5 pr-4 hidden md:table-cell">
         {% if person.email %}
         <a href="mailto:{{ person.email }}"
            class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 transition-colors">

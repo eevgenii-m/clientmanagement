@@ -61,10 +61,19 @@ urlpatterns = [
     path('notes/o/<uuid:noteuuid>', models_views.viewSecretNoteViewOpen, name='note_open'),
 
     re_path(r'^tool/(?P<tool_type>(l|f))$', models_views.AddNewToolView, name='new_tool'),
+    path('tool/<int:toolid>/view', models_views.toolView, name='tool_view'),
     re_path(r'^tools/(?P<tool_type>(l|f|))$', clientmanagement_views.allToolsView, name='all_tools'),
     path('tool/f/d/<uuid:tooluuid>', models_views.downloadToolPublic, name='download_tool_public'),
     path('tool/f/d/p/<uuid:tooluuid>', models_views.downloadTool, name='download_tool'),
 
+    path('files/', models_views.allSharedFilesView, name='all_shared_files'),
+    path('files/upload', models_views.uploadSharedFileView, name='upload_shared_file'),
+    path('files/<uuid:fileuuid>/download', models_views.downloadSharedFilePublic, name='download_shared_file'),
+    path('files/<uuid:fileuuid>/edit', models_views.editSharedFileView, name='shared_file_edit'),
+    path('files/<int:fileid>/delete', models_views.deleteSharedFileView, name='delete_shared_file'),
+    path('files/<uuid:fileuuid>', models_views.viewSharedFileView, name='shared_file_view'),
+
+    path('help/', clientmanagement_views.helpview, name='help'),
     path('statistics/', clientmanagement_views.statisticsview, name='statistics'),
     path('client', models_views.clientForm, name='newclient'),
     path('client/<int:clientid>/r', models_views.downloadRouterSettings, name='download_router_settings'),

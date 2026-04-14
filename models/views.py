@@ -24,6 +24,7 @@ from models import ticket_commentform
 from models import tools, toolsform
 from models import uploaded_file
 from models import wikiarticleform
+from models import sharedfileviews
 # Create your views here.
 
 
@@ -134,14 +135,44 @@ def AddSecretNoteView(request):
     return secretnoteform.SecretNoteFormParse(request)
 
 @login_required( login_url = 'login' )
-def AddNewToolView(request, tool_type):    
+def AddNewToolView(request, tool_type):
     valid, response = main_views.initRequest(request)
     if not valid:
         return response
     return toolsform.ToolFormParser(request, tool_type)
 
 @login_required( login_url = 'login' )
-def downloadRouterSettings(request, clientid):    
+def toolView(request, toolid):
+    valid, response = main_views.initRequest(request)
+    if not valid:
+        return response
+    return toolsform.ToolViewParser(request, toolid)
+
+@login_required(login_url='login')
+def allSharedFilesView(request):
+    return sharedfileviews.AllSharedFilesParser(request)
+
+@login_required(login_url='login')
+def uploadSharedFileView(request):
+    return sharedfileviews.UploadSharedFileParser(request)
+
+def downloadSharedFilePublic(request, fileuuid):
+    return sharedfileviews.DownloadSharedFilePublic(request, fileuuid)
+
+@login_required(login_url='login')
+def deleteSharedFileView(request, fileid):
+    return sharedfileviews.DeleteSharedFileView(request, fileid)
+
+@login_required(login_url='login')
+def viewSharedFileView(request, fileuuid):
+    return sharedfileviews.ViewSharedFile(request, fileuuid)
+
+@login_required(login_url='login')
+def editSharedFileView(request, fileuuid):
+    return sharedfileviews.EditSharedFile(request, fileuuid)
+
+@login_required( login_url = 'login' )
+def downloadRouterSettings(request, clientid):
     valid, response = main_views.initRequest(request)
     if not valid:
         return response
