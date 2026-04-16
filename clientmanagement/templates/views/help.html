@@ -184,11 +184,13 @@ The **Tools** section stores links and downloadable files that the team uses reg
 
 ---
 
-## 📁 Files
+## 📁 File Sharing
 
-The **Files** section provides temporary file sharing — upload a file and share a public download link with clients or external contacts. No portal account is required to download.
+The **File Sharing** section covers two ways to exchange files with clients: outbound shared files and inbound upload links.
 
-### Features
+### Shared Files
+
+Upload a file and share a public download link with clients or external contacts. No portal account is required to download.
 
 - **Upload any file** — no file type restrictions
 - **Download limit** — optionally cap the number of times a file can be downloaded
@@ -197,18 +199,119 @@ The **Files** section provides temporary file sharing — upload a file and shar
 - **Public link** — a unique URL that anyone can use to download the file (no login required)
 - **Copy link button** — one-click copy of the download URL
 
-### How to share a file
+**How to share a file:**
 
-1. Click **Upload File** on the Files page
+1. Click **Upload File** on the File Sharing page
 2. Choose the file and optionally add a description, expiry (1–90 days), or download limit
 3. After upload, click **View** to open the file detail page
 4. Copy the **Public download link** and share it with the recipient
 
-### File states
+**File states:** Active · Expired (link returns "File unavailable") · Limit reached
 
-- **Active** — link works, file can be downloaded
-- **Expired** — expiry date has passed; link returns "File unavailable"
-- **Limit reached** — download count hit the maximum; link returns "Download limit reached"
+### Upload Links
+
+Upload Links let clients send files to you without a portal account.
+
+- **Create a link** — set a title, optional instructions, expiry (1–90 days), and a maximum file count (1–50)
+- **Share the link** — copy the unique URL from the link detail page and send it to the client
+- **Client uploads** — the client opens the URL, selects one or more files, and submits — no login required
+- **Edit a link** — update the title, instructions, expiry, or file limit at any time
+- **Deactivate / Activate** — toggle a link on or off without deleting it
+- **Uploaded files** — view and download all files clients have sent via the link detail page
+
+**How to create an upload link:**
+
+1. Click **Upload Links** on the File Sharing page
+2. Click **Create Upload Link** and fill in the form
+3. Open the link detail page, copy the shareable URL, and send it to the client
+
+---
+
+## 📋 Projects
+
+The **Projects** section is a task and project management board for tracking Infotek's internal work.
+
+### Features
+
+- **Project cards** — each project shows title, status, priority, due date, and open task count
+- **Drag-and-drop** — reorder projects by dragging cards (⠿ handle); reorder tasks within a project by dragging rows
+- **Task management** — add tasks to any project; tasks support status, priority, due date, and assignment
+- **Subtasks** — tasks can have child tasks (subtasks)
+- **Quick inline editing** — change task status or priority directly from the row without opening a form
+- **Column sort** — click any column header (Status, Priority, Due) in a task table to sort tasks within that project
+- **Archive** — archive completed projects to keep the board clean; view, restore, or permanently delete from Archived Projects
+
+### Project statuses
+
+| Status | Meaning |
+|--------|---------|
+| Active | Currently in progress |
+| On hold | Paused temporarily |
+| Completed | Finished |
+| Cancelled | Will not be completed |
+
+### Task statuses
+
+| Status | Meaning |
+|--------|---------|
+| Not started | Work hasn't begun |
+| In progress | Currently being worked on |
+| Done | Completed |
+| Blocked | Can't proceed — waiting on something |
+| On hold | Paused |
+
+### How to use
+
+1. Click **Projects** in the sidebar
+2. Click **+ New Project** to create a project
+3. Open a project card and click **+ Add Task** to add tasks
+4. Drag the ⠿ handle to reorder projects or tasks
+5. Use the inline status/priority selects on each task row for quick updates
+6. Click a column header to sort tasks in that project
+7. Archive a project with the **Archive** button when it's complete
+
+---
+
+## ✅ To-Do List
+
+The **To-Do List** is a personal and shared task tracker, separate from the Projects module.
+
+### Two panels
+
+- **Personal** — tasks only visible to you; use for personal reminders and daily tasks
+- **Shared** — tasks visible and editable by everyone on the team; supports assignee tracking
+
+### Features
+
+- **Flat table view** — all tasks shown in a single sortable table per panel, with columns for task name, status, priority, assignee (shared only), and due date
+- **Quick-add** — type a task in the text box below the table and press Add
+- **Edit modal** — click the pencil icon on any task to edit title, description, status, priority, due date (and assignee for shared tasks)
+- **Status dropdown** — click the status badge on any task to change its status directly from the table
+- **Drag-and-drop** — drag tasks within the table to reorder them
+- **Priority badges** — High / Medium / Low colour-coded badges on each task
+- **Overdue warning** — tasks past their due date show a red ⚠ warning
+- **Assign to (Shared only)** — assign a shared task to a team member; their initials appear as an avatar in the Assigned column
+- **Auto-archive** — Done tasks are automatically archived 14 days after completion
+- **Manual archive** — archive any Done task immediately using the archive button
+- **Archived tasks** — view and restore from the **Archived** link in the page header
+- **Sort** — click Name, Priority, or Due column headers to sort tasks; click again to reverse
+
+### Task statuses
+
+| Status | Meaning |
+|---------|---------|
+| Not started | Task not yet begun |
+| In progress | Currently being worked on |
+| Done | Completed |
+
+### How to use
+
+1. Click **To-Do List** in the sidebar
+2. Use the **Personal** / **Shared** tabs to switch panels
+3. Add tasks using the quick-add bar below the table
+4. Click the status badge to quickly change a task's status
+5. Click the pencil icon to edit full details; click the ✕ icon to delete
+6. Done tasks auto-archive after 14 days
 
 ---
 

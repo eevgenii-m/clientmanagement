@@ -7,4 +7,6 @@ from models import router
 from models import updates
 from models import ticket
 from models.email import mailbox
+from models import project
+from models import uploadlink
 # Create your models here.

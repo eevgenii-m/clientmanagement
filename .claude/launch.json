@@ -2,7 +2,8 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "Django Dev Server",
+      "startupPrompt": "Read CLAUDE.md and DESIGN.md before making changes",
+	  "name": "Django Dev Server",
       "runtimeExecutable": "python",
       "runtimeArgs": ["manage.py", "runserver", "8000"],
       "port": 8000

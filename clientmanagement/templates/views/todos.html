@@ -1,0 +1,887 @@
+{% extends "_basenorm.html" %}
+{% load static %}
+
+{% block page_title %}To-Do List{% endblock %}
+
+{% block extra_css %}
+<style>
+html, body { overflow: auto; height: auto; }
+
+/* Tabs */
+.tab-active   { background:#fff; color:#1e293b; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.tab-inactive { color:#64748b; }
+.tab-inactive:hover { color:#1e293b; }
+
+/* Table */
+.todo-table tbody tr:hover td { background:#f8fafc; }
+.todo-table tbody tr td { transition: background .1s; }
+.todo-done-title { text-decoration:line-through; color:#94a3b8; }
+
+/* Sort headers */
+.sort-header { cursor:pointer; user-select:none; white-space:nowrap; }
+.sort-header:hover { color:#1e293b !important; }
+
+/* Drag handle */
+.todo-drag-handle {
+    cursor:grab; color:#e2e8f0; font-size:.95rem; line-height:1; user-select:none;
+    display:inline-block;
+}
+.todo-drag-handle:hover  { color:#94a3b8; }
+.todo-drag-handle:active { cursor:grabbing; }
+.sortable-ghost td { background:#e2e8f0 !important; opacity:.4; }
+
+/* User avatar */
+.user-avatar {
+    width:20px; height:20px; border-radius:50%;
+    background:#dbeafe; color:#1d4ed8;
+    font-size:.6rem; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center;
+    flex-shrink:0; vertical-align:middle;
+}
+
+/* Edit modal */
+.modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.45);
+    z-index:1000; display:flex; align-items:center; justify-content:center;
+}
+.modal-box {
+    background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.2);
+    width:100%; max-width:480px; padding:1.5rem; margin:1rem;
+    max-height:90vh; overflow-y:auto;
+}
+.modal-input {
+    width:100%; border:1px solid #e2e8f0; border-radius:6px;
+    padding:6px 10px; font-size:.875rem; color:#1e293b; background:#fff;
+    outline:none; font-family:'DM Sans',sans-serif; transition:border-color .15s;
+    box-sizing:border-box;
+}
+.modal-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+</style>
+{% endblock %}
+
+
+{% block body %}
+
+<!-- Edit Todo Modal (outside panels, shared by both) -->
+<div id="edit-todo-modal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+        <h3 class="text-base font-semibold text-slate-800 mb-4">Edit Task</h3>
+        <form id="edit-todo-form" method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Title</label>
+                <input type="text" name="title" id="edit-todo-title" class="modal-input" required maxlength="200">
+            </div>
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Description</label>
+                <textarea name="description" id="edit-todo-desc" class="modal-input" rows="2" style="resize:vertical"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Status</label>
+                    <select name="status" id="edit-todo-status" class="modal-input">
+                        {% for val, label in todo_statuses %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Priority</label>
+                    <select name="priority" id="edit-todo-priority" class="modal-input">
+                        {% for val, label in priority_choices %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Due date</label>
+                <input type="date" name="due_date" id="edit-todo-due" class="modal-input">
+            </div>
+            <div id="edit-todo-assign-row" class="mb-3" style="display:none">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Assign to</label>
+                <select name="assigned_to" id="edit-todo-assigned" class="modal-input">
+                    <option value="">Unassigned</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex gap-2 justify-end mt-4">
+                <button type="button" onclick="closeEditModal()"
+                        class="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                    Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- Sticky header -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-4">
+<div class="max-w-5xl mx-auto flex items-center gap-3 flex-wrap">
+
+    <h1 class="text-xl font-semibold text-slate-800">To-Do List</h1>
+
+    <!-- Tab switcher -->
+    <div class="flex gap-1 bg-slate-100 rounded-lg p-1">
+        <button onclick="showTab('personal')" id="tab-personal"
+                class="tab-active px-3 py-1.5 text-sm rounded-md font-medium transition-colors">
+            Personal
+        </button>
+        <button onclick="showTab('shared')" id="tab-shared"
+                class="tab-inactive px-3 py-1.5 text-sm rounded-md font-medium transition-colors">
+            Shared
+        </button>
+    </div>
+
+    <div class="flex-1"></div>
+
+    <a href="{% url 'archived_todos' %}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
+        </svg>
+        Archived
+    </a>
+
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════ PERSONAL PANEL ═══════════════════════════════════ -->
+<div id="panel-personal">
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <table class="w-full table-fixed todo-table">
+        <colgroup>
+            <col style="width:28px">
+            <col>
+            <col style="width:120px">
+            <col style="width:100px">
+            <col style="width:130px">
+            <col style="width:90px">
+            <col style="width:60px">
+        </colgroup>
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+                <th class="px-3 py-2"></th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                    data-col="title" onclick="sortTodos('personal','title')">
+                    Task <span class="sort-indicator text-blue-500"></span>
+                </th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                    data-col="status" onclick="sortTodos('personal','status')">
+                    Status <span class="sort-indicator text-blue-500"></span>
+                </th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                    data-col="priority" onclick="sortTodos('personal','priority')">
+                    Priority <span class="sort-indicator text-blue-500"></span>
+                </th>
+                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    Assigned
+                </th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                    data-col="due" onclick="sortTodos('personal','due')">
+                    Due <span class="sort-indicator text-blue-500"></span>
+                </th>
+                <th class="px-3 py-2"></th>
+            </tr>
+        </thead>
+        <tbody id="todo-tbody-personal">
+        {% for todo in personal_active %}
+            <tr data-todo-id="{{ todo.id }}"
+                data-title="{{ todo.title|escapejs }}"
+                data-status="{{ todo.status }}"
+                data-priority="{{ todo.priority }}"
+                data-due="{{ todo.due_date|date:'Y-m-d'|default:'' }}"
+                class="border-b border-slate-100">
+                <td class="px-3 py-2 text-center">
+                    <span class="todo-drag-handle" title="Drag to reorder">⠿</span>
+                </td>
+                <td class="px-3 py-2">
+                    <div class="text-sm text-slate-800 {% if todo.status == 'done' %}todo-done-title{% endif %}"
+                         style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;">
+                        {{ todo.title }}
+                    </div>
+                    {% if todo.description %}
+                    <div class="text-xs text-slate-400 truncate mt-0.5">{{ todo.description|truncatechars:70 }}</div>
+                    {% endif %}
+                    {% if todo.status == 'done' %}
+                    <div class="flex items-center gap-2 mt-0.5">
+                        {% if todo.completed_on %}
+                        <span class="text-xs text-slate-400">Done {{ todo.completed_on|date:"M j" }}</span>
+                        {% endif %}
+                        {% with days=todo.auto_archive_in_days %}
+                        {% if days is not None and days <= 3 %}
+                        <span class="text-xs text-amber-500 font-medium">Archives in {{ days }} day{{ days|pluralize }}</span>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2">
+                    <div x-data="{ open: false }" class="inline-block relative">
+                        <button @click="open = !open"
+                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer
+                                       {% if todo.status == 'done' %}bg-emerald-50 text-emerald-700
+                                       {% elif todo.status == 'inprogress' %}bg-blue-50 text-blue-700
+                                       {% else %}bg-slate-100 text-slate-600{% endif %}">
+                            {% if todo.status == 'done' %}Done
+                            {% elif todo.status == 'inprogress' %}In progress
+                            {% else %}Not started{% endif %}
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div x-show="open"
+                             x-cloak
+                             @click.outside="open = false"
+                             x-init="$watch('open', function(v){ if(v){ var r=$el.previousElementSibling.getBoundingClientRect(); $el.style.top=r.bottom+'px'; $el.style.left=r.left+'px'; } })"
+                             style="position:fixed;z-index:9999;"
+                             class="bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[120px]">
+                            {% for val, label in todo_statuses %}
+                            <form method="POST" action="{% url 'edit_todo' todo.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="{{ val }}">
+                                <input type="hidden" name="title" value="{{ todo.title|escapejs }}">
+                                <input type="hidden" name="priority" value="{{ todo.priority }}">
+                                <input type="hidden" name="due_date" value="{{ todo.due_date|date:'Y-m-d'|default:'' }}">
+                                <button type="submit" class="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 text-slate-700">{{ label }}</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </td>
+                <td class="px-3 py-2">
+                    {% if todo.priority == 'high' %}
+                    <span class="text-xs font-medium text-orange-600">↑ High</span>
+                    {% elif todo.priority == 'medium' %}
+                    <span class="text-xs font-medium text-amber-600">→ Medium</span>
+                    {% else %}
+                    <span class="text-xs text-slate-400">↓ Low</span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2">
+                    <span class="text-xs text-slate-300">—</span>
+                </td>
+                <td class="px-3 py-2">
+                    {% if todo.due_date %}
+                    <span class="text-xs {% if todo.is_overdue %}text-red-600 font-medium{% else %}text-slate-500{% endif %}">
+                        {% if todo.is_overdue %}⚠ {% endif %}{{ todo.due_date|date:"M j" }}
+                    </span>
+                    {% else %}
+                    <span class="text-xs text-slate-300">—</span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2">
+                    <div class="flex items-center gap-0.5">
+                        {% if todo.status == 'done' %}
+                        <form method="POST" action="{% url 'edit_todo' todo.id %}" class="m-0">
+                            {% csrf_token %}<input type="hidden" name="action" value="archive">
+                            <button type="submit" class="p-1 text-slate-300 hover:text-slate-500 transition-colors" title="Archive">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
+                                </svg>
+                            </button>
+                        </form>
+                        {% endif %}
+                        <button type="button"
+                                onclick="openEditTodo({{ todo.id }},'{{ todo.title|escapejs }}','{{ todo.description|escapejs }}','{{ todo.status }}','{{ todo.priority }}','{{ todo.due_date|date:'Y-m-d'|default:'' }}','personal','')"
+                                class="p-1 text-slate-300 hover:text-slate-600 transition-colors" title="Edit">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </button>
+                        <form method="POST" action="{% url 'edit_todo' todo.id %}" class="m-0">
+                            {% csrf_token %}<input type="hidden" name="action" value="delete">
+                            <button type="submit" onclick="return confirm('Delete this task?')"
+                                    class="p-1 text-slate-300 hover:text-red-500 transition-colors" title="Delete">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-400">No tasks yet — add one below</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <!-- Add personal task -->
+    <div class="px-4 py-3 border-t border-slate-100">
+        <form method="POST" action="{% url 'add_todo' %}" class="flex items-center gap-2 flex-wrap">
+            {% csrf_token %}
+            <input type="hidden" name="scope" value="personal">
+            <input type="text" name="title" placeholder="Add a task…" required maxlength="200"
+                   class="flex-1 min-w-[160px] px-3 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors">
+            <select name="priority"
+                    class="px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 bg-white">
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+            </select>
+            <input type="date" name="due_date"
+                   class="px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400">
+            <button type="submit"
+                    class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                Add
+            </button>
+        </form>
+    </div>
+</div>
+
+    <!-- Done section — personal -->
+    <div class="mt-4">
+        <button onclick="toggleDoneSection('personal')"
+                class="w-full flex items-center gap-2 py-2 px-1 text-left group">
+            <svg id="done-chevron-personal" class="w-4 h-4 text-slate-400 transition-transform duration-200"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Done</span>
+            <span class="text-xs bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-full ml-1">{{ personal_done_count }}</span>
+            <span class="text-xs text-slate-300 ml-2">· auto-archives after 14 days</span>
+        </button>
+        <div id="done-section-personal" class="bg-white rounded-xl border border-slate-200 overflow-hidden mt-1">
+            <table class="w-full table-fixed">
+                <colgroup>
+                    <col style="width:28px">
+                    <col>
+                    <col style="width:120px">
+                    <col style="width:100px">
+                    <col style="width:130px">
+                    <col style="width:90px">
+                    <col style="width:60px">
+                </colgroup>
+                <tbody>
+                {% for todo in personal_done %}
+                <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td class="px-3 py-2">
+                        <form method="POST" action="{% url 'edit_todo' todo.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="toggle">
+                            <button type="submit" title="Mark in progress"
+                                    class="w-4 h-4 rounded border-2 border-emerald-500 bg-emerald-500 flex items-center justify-center">
+                                <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </td>
+                    <td class="px-3 py-2">
+                        <div class="text-sm text-slate-400 line-through"
+                             style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                            {{ todo.title }}
+                        </div>
+                        {% if todo.completed_on %}
+                        <div class="text-xs text-slate-300 mt-0.5">Done {{ todo.completed_on|date:"M j" }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-3 py-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Done</span>
+                    </td>
+                    <td class="px-3 py-2">
+                        {% if todo.priority == 'high' %}<span class="text-xs font-medium text-orange-600">↑ High</span>
+                        {% elif todo.priority == 'medium' %}<span class="text-xs font-medium text-amber-600">→ Medium</span>
+                        {% else %}<span class="text-xs text-slate-400">↓ Low</span>{% endif %}
+                    </td>
+                    <td class="px-3 py-2"><span class="text-xs text-slate-300">—</span></td>
+                    <td class="px-3 py-2">
+                        {% if todo.due_date %}<span class="text-xs text-slate-400">{{ todo.due_date|date:"M j" }}</span>
+                        {% else %}<span class="text-xs text-slate-300">—</span>{% endif %}
+                    </td>
+                    <td class="px-3 py-2">
+                        <div class="flex items-center gap-1">
+                            <form method="POST" action="{% url 'edit_todo' todo.id %}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="archive">
+                                <button type="submit" title="Archive now"
+                                        class="p-1 text-slate-300 hover:text-slate-500 transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                            <form method="POST" action="{% url 'edit_todo' todo.id %}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete">
+                                <button type="submit" onclick="return confirm('Delete this task?')"
+                                        class="p-1 text-slate-300 hover:text-red-500 transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-6 text-center text-sm text-slate-400">No completed tasks</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>{# end panel-personal #}
+
+
+<!-- ═══════════════════════════════════ SHARED PANEL ═══════════════════════════════════ -->
+<div id="panel-shared" style="display:none">
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <table class="w-full table-fixed todo-table">
+        <colgroup>
+            <col style="width:28px">
+            <col>
+            <col style="width:120px">
+            <col style="width:100px">
+            <col style="width:130px">
+            <col style="width:90px">
+            <col style="width:60px">
+        </colgroup>
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+                <th class="px-3 py-2"></th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                    data-col="title" onclick="sortTodos('shared','title')">
+                    Task <span class="sort-indicator text-blue-500"></span>
+                </th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                    data-col="status" onclick="sortTodos('shared','status')">
+                    Status <span class="sort-indicator text-blue-500"></span>
+                </th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                    data-col="priority" onclick="sortTodos('shared','priority')">
+                    Priority <span class="sort-indicator text-blue-500"></span>
+                </th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-800 select-none"
+                    data-col="assigned" onclick="sortTodos('shared','assigned')">
+                    Assigned <span class="sort-indicator text-blue-500"></span>
+                </th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                    data-col="due" onclick="sortTodos('shared','due')">
+                    Due <span class="sort-indicator text-blue-500"></span>
+                </th>
+                <th class="px-3 py-2"></th>
+            </tr>
+        </thead>
+        <tbody id="todo-tbody-shared">
+        {% for todo in shared_active %}
+            <tr data-todo-id="{{ todo.id }}"
+                data-title="{{ todo.title|escapejs }}"
+                data-status="{{ todo.status }}"
+                data-priority="{{ todo.priority }}"
+                data-due="{{ todo.due_date|date:'Y-m-d'|default:'' }}"
+                data-assigned="{{ todo.assigned_to.get_full_name|default:''|escapejs }}"
+                class="border-b border-slate-100">
+                <td class="px-3 py-2 text-center">
+                    <span class="todo-drag-handle" title="Drag to reorder">⠿</span>
+                </td>
+                <td class="px-3 py-2">
+                    <div class="flex items-center gap-1 mb-0.5">
+                        <span class="user-avatar" title="Created: {{ todo.user.get_full_name|default:todo.user.username }}">
+                            {{ todo.user.first_name|first|default:todo.user.username|first|upper }}
+                        </span>
+                        {% if todo.assigned_to %}
+                        <span class="user-avatar" style="background:#e0e7ff;color:#4338ca;" title="Assigned: {{ todo.assigned_to.get_full_name|default:todo.assigned_to.username }}">
+                            {{ todo.assigned_to.first_name|first|default:todo.assigned_to.username|first|upper }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="text-sm text-slate-800 {% if todo.status == 'done' %}todo-done-title{% endif %}"
+                         style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;">
+                        {{ todo.title }}
+                    </div>
+                    {% if todo.description %}
+                    <div class="text-xs text-slate-400 truncate mt-0.5">{{ todo.description|truncatechars:70 }}</div>
+                    {% endif %}
+                    {% if todo.status == 'done' and todo.completed_on %}
+                    <div class="text-xs text-slate-400 mt-0.5">Done {{ todo.completed_on|date:"M j" }}</div>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2">
+                    <div x-data="{ open: false }" class="inline-block relative">
+                        <button @click="open = !open"
+                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer
+                                       {% if todo.status == 'done' %}bg-emerald-50 text-emerald-700
+                                       {% elif todo.status == 'inprogress' %}bg-blue-50 text-blue-700
+                                       {% else %}bg-slate-100 text-slate-600{% endif %}">
+                            {% if todo.status == 'done' %}Done
+                            {% elif todo.status == 'inprogress' %}In progress
+                            {% else %}Not started{% endif %}
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div x-show="open"
+                             x-cloak
+                             @click.outside="open = false"
+                             x-init="$watch('open', function(v){ if(v){ var r=$el.previousElementSibling.getBoundingClientRect(); $el.style.top=r.bottom+'px'; $el.style.left=r.left+'px'; } })"
+                             style="position:fixed;z-index:9999;"
+                             class="bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[120px]">
+                            {% for val, label in todo_statuses %}
+                            <form method="POST" action="{% url 'edit_todo' todo.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="{{ val }}">
+                                <input type="hidden" name="title" value="{{ todo.title|escapejs }}">
+                                <input type="hidden" name="priority" value="{{ todo.priority }}">
+                                <input type="hidden" name="due_date" value="{{ todo.due_date|date:'Y-m-d'|default:'' }}">
+                                <button type="submit" class="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 text-slate-700">{{ label }}</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </td>
+                <td class="px-3 py-2">
+                    {% if todo.priority == 'high' %}
+                    <span class="text-xs font-medium text-orange-600">↑ High</span>
+                    {% elif todo.priority == 'medium' %}
+                    <span class="text-xs font-medium text-amber-600">→ Medium</span>
+                    {% else %}
+                    <span class="text-xs text-slate-400">↓ Low</span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2">
+                    {% if todo.assigned_to %}
+                    <div class="flex items-center gap-1.5">
+                        <span class="user-avatar" style="background:#e0e7ff;color:#4338ca;flex-shrink:0;">
+                            {{ todo.assigned_to.first_name|first|default:todo.assigned_to.username|first|upper }}
+                        </span>
+                        <span class="text-xs text-slate-600 truncate">{{ todo.assigned_to.get_full_name|default:todo.assigned_to.username }}</span>
+                    </div>
+                    {% else %}
+                    <span class="text-xs text-slate-400">Unassigned</span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2">
+                    {% if todo.due_date %}
+                    <span class="text-xs {% if todo.is_overdue %}text-red-600 font-medium{% else %}text-slate-500{% endif %}">
+                        {% if todo.is_overdue %}⚠ {% endif %}{{ todo.due_date|date:"M j" }}
+                    </span>
+                    {% else %}
+                    <span class="text-xs text-slate-300">—</span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2">
+                    <div class="flex items-center gap-0.5">
+                        <button type="button"
+                                onclick="openEditTodo({{ todo.id }},'{{ todo.title|escapejs }}','{{ todo.description|escapejs }}','{{ todo.status }}','{{ todo.priority }}','{{ todo.due_date|date:'Y-m-d'|default:'' }}','shared','{{ todo.assigned_to_id|default:'' }}')"
+                                class="p-1 text-slate-300 hover:text-slate-600 transition-colors" title="Edit">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </button>
+                        <form method="POST" action="{% url 'edit_todo' todo.id %}" class="m-0">
+                            {% csrf_token %}<input type="hidden" name="action" value="delete">
+                            <button type="submit" onclick="return confirm('Delete this shared task?')"
+                                    class="p-1 text-slate-300 hover:text-red-500 transition-colors" title="Delete">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-400">No shared tasks yet — add one below</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <!-- Add shared task -->
+    <div class="px-4 py-3 border-t border-slate-100">
+        <form method="POST" action="{% url 'add_todo' %}" class="flex items-center gap-2 flex-wrap">
+            {% csrf_token %}
+            <input type="hidden" name="scope" value="shared">
+            <input type="text" name="title" placeholder="Add shared task…" required maxlength="200"
+                   class="flex-1 min-w-[160px] px-3 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors">
+            <select name="priority"
+                    class="px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 bg-white">
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+            </select>
+            <input type="date" name="due_date"
+                   class="px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400">
+            <button type="submit"
+                    class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                Add
+            </button>
+        </form>
+    </div>
+</div>
+
+    <!-- Done section — shared -->
+    <div class="mt-4">
+        <button onclick="toggleDoneSection('shared')"
+                class="w-full flex items-center gap-2 py-2 px-1 text-left group">
+            <svg id="done-chevron-shared" class="w-4 h-4 text-slate-400 transition-transform duration-200"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Done</span>
+            <span class="text-xs bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-full ml-1">{{ shared_done_count }}</span>
+            <span class="text-xs text-slate-300 ml-2">· auto-archives after 14 days</span>
+        </button>
+        <div id="done-section-shared" class="bg-white rounded-xl border border-slate-200 overflow-hidden mt-1">
+            <table class="w-full table-fixed">
+                <colgroup>
+                    <col style="width:28px">
+                    <col>
+                    <col style="width:120px">
+                    <col style="width:100px">
+                    <col style="width:130px">
+                    <col style="width:90px">
+                    <col style="width:60px">
+                </colgroup>
+                <tbody>
+                {% for todo in shared_done %}
+                <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td class="px-3 py-2">
+                        <form method="POST" action="{% url 'edit_todo' todo.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="toggle">
+                            <button type="submit" title="Mark in progress"
+                                    class="w-4 h-4 rounded border-2 border-emerald-500 bg-emerald-500 flex items-center justify-center">
+                                <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </td>
+                    <td class="px-3 py-2">
+                        <div class="flex items-center gap-1 mb-0.5">
+                            <span class="user-avatar" title="Created: {{ todo.user.get_full_name|default:todo.user.username }}">
+                                {{ todo.user.first_name|first|default:todo.user.username|first|upper }}
+                            </span>
+                            {% if todo.assigned_to %}
+                            <span class="user-avatar" style="background:#e0e7ff;color:#4338ca;" title="Assigned: {{ todo.assigned_to.get_full_name|default:todo.assigned_to.username }}">
+                                {{ todo.assigned_to.first_name|first|default:todo.assigned_to.username|first|upper }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="text-sm text-slate-400 line-through"
+                             style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                            {{ todo.title }}
+                        </div>
+                        {% if todo.completed_on %}
+                        <div class="text-xs text-slate-300 mt-0.5">Done {{ todo.completed_on|date:"M j" }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-3 py-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Done</span>
+                    </td>
+                    <td class="px-3 py-2">
+                        {% if todo.priority == 'high' %}<span class="text-xs font-medium text-orange-600">↑ High</span>
+                        {% elif todo.priority == 'medium' %}<span class="text-xs font-medium text-amber-600">→ Medium</span>
+                        {% else %}<span class="text-xs text-slate-400">↓ Low</span>{% endif %}
+                    </td>
+                    <td class="px-3 py-2">
+                        {% if todo.assigned_to %}
+                        <div class="flex items-center gap-1.5">
+                            <span class="user-avatar" style="background:#e0e7ff;color:#4338ca;flex-shrink:0;">
+                                {{ todo.assigned_to.first_name|first|default:todo.assigned_to.username|first|upper }}
+                            </span>
+                            <span class="text-xs text-slate-500 truncate">{{ todo.assigned_to.get_full_name|default:todo.assigned_to.username }}</span>
+                        </div>
+                        {% else %}
+                        <span class="text-xs text-slate-400">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-3 py-2">
+                        {% if todo.due_date %}<span class="text-xs text-slate-400">{{ todo.due_date|date:"M j" }}</span>
+                        {% else %}<span class="text-xs text-slate-300">—</span>{% endif %}
+                    </td>
+                    <td class="px-3 py-2">
+                        <div class="flex items-center gap-1">
+                            <form method="POST" action="{% url 'edit_todo' todo.id %}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="archive">
+                                <button type="submit" title="Archive now"
+                                        class="p-1 text-slate-300 hover:text-slate-500 transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                            <form method="POST" action="{% url 'edit_todo' todo.id %}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete">
+                                <button type="submit" onclick="return confirm('Delete this task?')"
+                                        class="p-1 text-slate-300 hover:text-red-500 transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-6 text-center text-sm text-slate-400">No completed tasks</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>{# end panel-shared #}
+
+
+{% endblock %}
+
+
+{% block extra_javascript %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+// ── CSRF helper ──────────────────────────────────────────────────────────────
+function getCookie(name) {
+    var m = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[2]) : '';
+}
+
+// ── Tab switching ────────────────────────────────────────────────────────────
+function showTab(tab) {
+    document.getElementById('panel-personal').style.display = tab === 'personal' ? 'block' : 'none';
+    document.getElementById('panel-shared').style.display   = tab === 'shared'   ? 'block' : 'none';
+    var activeClass   = 'tab-active px-3 py-1.5 text-sm rounded-md font-medium transition-colors';
+    var inactiveClass = 'tab-inactive px-3 py-1.5 text-sm rounded-md font-medium transition-colors';
+    document.getElementById('tab-personal').className = tab === 'personal' ? activeClass : inactiveClass;
+    document.getElementById('tab-shared').className   = tab === 'shared'   ? activeClass : inactiveClass;
+    try { localStorage.setItem('todo_tab_{{ request.user.id }}', tab); } catch(e) {}
+}
+
+// ── Edit modal ───────────────────────────────────────────────────────────────
+function openEditTodo(id, title, desc, status, priority, due, scope, assignedId) {
+    document.getElementById('edit-todo-form').action = '/todo/' + id + '/edit';
+    document.getElementById('edit-todo-title').value    = title;
+    document.getElementById('edit-todo-desc').value     = desc;
+    document.getElementById('edit-todo-status').value   = status;
+    document.getElementById('edit-todo-priority').value = priority;
+    document.getElementById('edit-todo-due').value      = due;
+    var assignRow = document.getElementById('edit-todo-assign-row');
+    if (scope === 'shared') {
+        assignRow.style.display = '';
+        document.getElementById('edit-todo-assigned').value = assignedId || '';
+    } else {
+        assignRow.style.display = 'none';
+    }
+    document.getElementById('edit-todo-modal').style.display = 'flex';
+}
+function closeEditModal() {
+    document.getElementById('edit-todo-modal').style.display = 'none';
+}
+
+// ── Done section collapse/expand ─────────────────────────────────────────────
+function toggleDoneSection(panel) {
+    var section = document.getElementById('done-section-' + panel);
+    var chevron = document.getElementById('done-chevron-' + panel);
+    if (!section) return;
+    var isHidden = section.style.display === 'none';
+    section.style.display = isHidden ? 'block' : 'none';
+    chevron.style.transform = isHidden ? '' : 'rotate(-90deg)';
+    try { localStorage.setItem('todo_done_' + panel + '_{{ request.user.id }}', isHidden ? 'open' : 'closed'); } catch(e) {}
+}
+document.getElementById('edit-todo-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+
+// ── Column sort ──────────────────────────────────────────────────────────────
+var todoSortDir = {};
+function sortTodos(panel, col) {
+    var tbody = document.getElementById('todo-tbody-' + panel);
+    if (!tbody) return;
+    var key = panel + '_' + col;
+    todoSortDir[key] = todoSortDir[key] === 'asc' ? 'desc' : 'asc';
+    var dir = todoSortDir[key];
+    var priorityOrder = { high: 0, medium: 1, low: 2 };
+    var statusOrder   = { todo: 0, inprogress: 1, done: 2 };
+    var rows = Array.from(tbody.querySelectorAll('tr[data-todo-id]'));
+    rows.sort(function(a, b) {
+        var av, bv;
+        if (col === 'title') {
+            av = (a.dataset.title || '').toLowerCase();
+            bv = (b.dataset.title || '').toLowerCase();
+        } else if (col === 'status') {
+            av = statusOrder[a.dataset.status]   !== undefined ? statusOrder[a.dataset.status]   : 99;
+            bv = statusOrder[b.dataset.status]   !== undefined ? statusOrder[b.dataset.status]   : 99;
+        } else if (col === 'priority') {
+            av = priorityOrder[a.dataset.priority] !== undefined ? priorityOrder[a.dataset.priority] : 99;
+            bv = priorityOrder[b.dataset.priority] !== undefined ? priorityOrder[b.dataset.priority] : 99;
+        } else if (col === 'due') {
+            av = a.dataset.due || '9999-12-31';
+            bv = b.dataset.due || '9999-12-31';
+        } else if (col === 'assigned') {
+            av = (a.dataset.assigned || 'zzz').toLowerCase();
+            bv = (b.dataset.assigned || 'zzz').toLowerCase();
+        }
+        var result = av < bv ? -1 : av > bv ? 1 : 0;
+        return dir === 'asc' ? result : -result;
+    });
+    rows.forEach(function(row) { tbody.appendChild(row); });
+    // Update indicators — only within this table
+    tbody.closest('table').querySelectorAll('.sort-indicator').forEach(function(el) { el.textContent = ''; });
+    var th = tbody.closest('table').querySelector('.sort-header[data-col="' + col + '"] .sort-indicator');
+    if (th) th.textContent = dir === 'asc' ? ' ↑' : ' ↓';
+}
+
+// ── DOMContentLoaded ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    // Restore active tab
+    var savedTab = 'personal';
+    try { savedTab = localStorage.getItem('todo_tab_{{ request.user.id }}') || 'personal'; } catch(e) {}
+    showTab(savedTab);
+
+    // Restore Done section collapse state
+    ['personal', 'shared'].forEach(function(panel) {
+        try {
+            var saved = localStorage.getItem('todo_done_' + panel + '_{{ request.user.id }}');
+            if (saved === 'closed') {
+                var section = document.getElementById('done-section-' + panel);
+                var chevron = document.getElementById('done-chevron-' + panel);
+                if (section) section.style.display = 'none';
+                if (chevron) chevron.style.transform = 'rotate(-90deg)';
+            }
+        } catch(e) {}
+    });
+
+    // SortableJS — one per tbody
+    ['personal', 'shared'].forEach(function(panel) {
+        var el = document.getElementById('todo-tbody-' + panel);
+        if (!el || typeof Sortable === 'undefined') return;
+        Sortable.create(el, {
+            handle: '.todo-drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function(evt) {
+                var todoId = parseInt(evt.item.dataset.todoId);
+                var order  = [];
+                el.querySelectorAll('tr[data-todo-id]').forEach(function(r, idx) {
+                    order.push({ id: parseInt(r.dataset.todoId), order: idx });
+                });
+                fetch('/todo/reorder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ todo_id: todoId, new_status: null, order: order })
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

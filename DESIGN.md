@@ -10,6 +10,7 @@
 | Rich text (legacy) | Quill 1.3.6 | CDN (loaded only when `needquillinput` is set) |
 | Markdown editor | EasyMDE | CDN (`unpkg.com/easymde/dist/easymde.min.js`) |
 | Markdown renderer | marked.js | CDN (`cdn.jsdelivr.net/npm/marked/marked.min.js`) |
+| Drag-and-drop | SortableJS 1.15.0 | CDN (`cdn.jsdelivr.net/npm/sortablejs@1.15.0`) — projects + tasks |
 | Fonts | DM Sans (400–700), JetBrains Mono | Google Fonts |
 | Backend | Django 4.2 / Python 3.12 | Apache + mod_wsgi |
 
@@ -67,11 +68,11 @@ Custom `brand` alias (maps to blue palette) is defined in `tailwind.config` in `
 ### Content widths
 | Template | Width | Use |
 |----------|-------|-----|
-| `_basenarrow.html` | `max-w-2xl mx-auto` | Forms and narrow single-item views |
-| `_basenorm.html` | `max-w-5xl mx-auto` | List pages and most detail views |
-| `_basewide.html` | full width + inner `max-w-5xl` | Detail/view pages (wiki, tools, notes, files); external public pages |
+| `_basenarrow.html` | `max-w-5xl mx-auto` | Edit/add forms (clients, people, tools, notes, files) |
+| `_basenorm.html` | `max-w-5xl mx-auto` | List pages, wiki editor, client detail |
+| `_basewide.html` | full width + inner `max-w-5xl` | View/detail pages (wiki, tools, notes, files); external public pages |
 
-**Width rule**: All internal detail pages (View pages reached by clicking action buttons) must be the **same width as list pages** (`max-w-5xl`). When using `_basewide.html` for a detail page, constrain content sections to `max-w-5xl mx-auto` and use the same inner wrapper in the sticky action bar.
+**Width rule**: All internal pages (list, view, edit) use `max-w-5xl` to maintain consistent width across all three levels. `_basenarrow` and `_basenorm` both resolve to `max-w-5xl` — the distinction is kept for semantic clarity (forms vs. lists). When using `_basewide.html`, constrain content sections and the sticky bar inner wrapper to `max-w-5xl mx-auto`.
 
 ### Sticky page header pattern — ALWAYS two divs
 
@@ -104,10 +105,10 @@ Custom `brand` alias (maps to blue palette) is defined in `tailwind.config` in `
 </div>
 ```
 
-**Form pages** (`_basenarrow.html` with `max-w-2xl` content):
+**Form pages** (`_basenarrow.html` with `max-w-5xl` content):
 ```html
 <div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
-<div class="max-w-2xl mx-auto flex items-center gap-3">
+<div class="max-w-5xl mx-auto flex items-center gap-3">
     <!-- ← Back | [Page title] | flex-1 spacer | [Cancel] [✓ Save] -->
 </div>
 </div>
@@ -229,7 +230,7 @@ Works from both the client detail view (`clid` passed) and the all-people list (
 
 ## Navigation
 
-Sidebar sections: **Main** → Home, Clients, People | **Tools** → Wiki, Tools, Secret Notes, Files | **Work** → Projects (Soon) | **System** → Help, Users (staff only)
+Sidebar sections: **Main** → Home, Clients, People | **Tools** → Wiki, Tools, Secret Notes, File Sharing | **Work** → Projects, My To-Do | **System** → Help, Users (staff only)
 
 Active state via `request.resolver_match.url_name` in templates:
 ```html
@@ -448,6 +449,61 @@ Five templates cover the Secret Notes module:
 
 ---
 
+## Projects module (`views/allprojects.html`, `views/archivedprojects.html`)
+
+- Extends `_basenorm.html` (projects list) / `_basewide.html` (archived).  `overflow: auto; height: auto` — NOT `overflow:hidden` (page-level scroll, not DataTable scroll model).
+- Sticky header: Projects | Archived (with count badge) | flex-1 | Refresh | New Project
+- Project cards: `id="proj-{id}" data-project-id="{id}"` for SortableJS targeting
+- **SortableJS 1.15.0**: `Sortable` on `#projects-sortable` (project cards) and each `tbody.tasks-sortable` (task rows); `onEnd` POSTs `{type:'project'|'task', order:[{id,order},...]}` to `/projects/reorder`
+- **localStorage collapse state**: key `project_collapsed_{user_id}_{project_id}`; restored in DOMContentLoaded; chevron rotated `-90deg` when collapsed
+- **Client-side column sort** (`sortTasks(projectId, col)`): reads `data-title`/`data-status`/`data-priority`/`data-assigned`/`data-due` from `<tr>` rows, appends sorted rows back into `<tbody id="task-list-{id}">`; sort indicator `▲`/`▼` shown in header `<span class="sort-indicator">`
+- **Table structure**: `table-fixed` + `<colgroup>` (28px drag | flex title | 130px status | 100px priority | 130px assigned | 90px due | 58px actions); columns hidden with `hidden md:table-cell` / `hidden lg:table-cell` on mobile
+- **Archive**: form POST `action=archive` → `edit_project` → `redirect('all_projects')`; Restore: `action=unarchive` → `redirect('archived_projects')`
+- **Task quick-edit**: inline `<select class="inline-select">` for status/priority POSTs via `quickUpdateTask()` AJAX; color class updated via `refreshBadge()`
+- **Four modals**: New Project / Edit Project (title, description, status, priority, due date, color swatches) / Add Task / Edit Task (title, description, status, priority, assigned to, start date, due date); all reload page on success
+
+## Todo module (`views/todos.html`)
+
+- Extends `_basenorm.html`. No DataTables. Natural page scroll (`overflow: auto`).
+- **Two tabs**: "Personal" and "Shared" — `localStorage` per user remembers active tab (`todo_active_tab_{user_id}`).
+- **Flat table per panel**: single `<table>` with columns: drag | task | status | priority | assigned | due | actions. No collapsible sections.
+- `tbody` IDs: `todo-tbody-personal` / `todo-tbody-shared`. Rows carry `data-todo-id`, `data-title`, `data-status`, `data-priority`, `data-due`.
+- **Status badge dropdown** — `position:fixed` z-index pattern (see below): Alpine.js `x-data="{ open:false }"` per row; `x-init` + `$watch('open', …)` positions the dropdown via `getBoundingClientRect()` when opened.
+- **Edit modal**: single `#edit-todo-modal` overlay at top of page; `openEditTodo()` JS function populates fields and shows it; Assign-to row visible for shared scope only.
+- **SortableJS drag-drop**: `Sortable` on each `<tbody>`; `onEnd` sends `{todo_id, new_status:null, order:[]}` to `POST /todo/reorder` (reorder only, no status change).
+- **Column sort**: `sortTodos(panel, col)` per panel; priority order: high→medium→low; sort indicators per table.
+- **Quick-add form**: below each table; `scope` hidden input.
+- **Auto-archive**: `all_todos` view bulk-archives done todos with `completed_on <= now - 14 days`.
+- **Shared Assign-to**: assignee shown as indigo avatar in Assigned column; personal column shows "—".
+
+### Status dropdown z-index fix (`position:fixed` + Alpine.js `x-init`)
+
+Dropdowns inside `<td>` elements are clipped by `overflow:hidden` on ancestor elements. Fix: render the dropdown with `position:fixed; z-index:9999` and use Alpine.js to position it to match the trigger button when opened.
+
+```html
+<div x-data="{ open: false }" class="inline-block relative">
+    <button @click="open = !open" class="...badge...">Label <svg chevron/></button>
+    <div x-show="open"
+         x-cloak
+         @click.outside="open = false"
+         x-init="$watch('open', function(v){
+             if(v){
+                 var r = $el.previousElementSibling.getBoundingClientRect();
+                 $el.style.top  = r.bottom + 'px';
+                 $el.style.left = r.left   + 'px';
+             }
+         })"
+         style="position:fixed; z-index:9999;"
+         class="bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[120px]">
+        <!-- dropdown items -->
+    </div>
+</div>
+```
+
+Use this pattern for any status/priority dropdown inside a table row. The `x-init` + `$watch` approach re-measures position every time the dropdown opens, keeping it correct after scroll or resize.
+
+---
+
 ## Key template files
 
 | File | Purpose |
@@ -481,9 +537,19 @@ Five templates cover the Secret Notes module:
 | `forms/unimodelform.html` | Generic add/edit form with sticky top action bar (clients, people, tools, etc.) |
 | `forms/wikieditform.html` | Wiki-specific editor with EasyMDE + sticky action bar |
 | `forms/widget/maybequill.html` | Renders Quill JSON or plain text (legacy wiki only) |
-| `views/allfiles.html` | Shared files list: DataTable, search, Copy/View/Delete actions, days-left color badges |
+| `views/allfiles.html` | Shared files list: DataTable, search, View action only (Copy/Delete on detail page), Upload Links button |
+| `views/uploadlinks.html` | Upload Links list: Title, Created, Expires, Files, Status, View + Edit actions |
+| `views/createuploadlink.html` | Create Upload Link form: title, instructions, expiry days, max files |
+| `views/viewuploadlink.html` | Upload Link detail: shareable URL with copy, file table with downloads, Edit + deactivate + delete |
+| `views/edituploadlink.html` | Edit Upload Link form: pre-filled title, instructions, optional expiry extension, max files |
+| `views/clientuploadpage.html` | Public upload page (no auth): multi-file upload form, success state |
+| `views/uploadlinkexpired.html` | Public error page for expired/inactive upload links |
 | `views/uploadfile.html` | File upload form: file, description, expires_days (1–90), max_downloads |
 | `views/fileview.html` | File detail: info grid, public URL with copy button, download log table (last 50) |
 | `views/editfile.html` | File edit form: description, expiry extension, download limit (extends `_basenarrow.html`) |
 | `views/fileexpired.html` | Public error page for expired / limit-reached / not-found shared files |
 | `views/help.html` | Help page: full portal guide rendered from inline Markdown via marked.js |
+| `views/allprojects.html` | Projects list: cards, SortableJS drag-drop, modals, archive, column sort |
+| `views/archivedprojects.html` | Archived projects: ← Back, Restore (unarchive) + Delete, read-only tasks |
+| `views/todos.html` | To-Do List: Personal + Shared tabs, flat table per panel, `position:fixed` status dropdown, centralized edit modal, SortableJS drag-drop, assignee avatars, auto-archive |
+| `views/archivedtodos.html` | Archived tasks: ← To-Do, Restore + Delete, scope/priority badges, completed/archived dates |

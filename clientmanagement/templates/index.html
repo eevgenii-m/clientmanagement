@@ -125,7 +125,7 @@
         </div>
     </a>
 
-    <!-- Files -->
+    <!-- File Sharing -->
     <a href="{% url 'all_shared_files' %}"
        class="group bg-white rounded-xl border border-slate-200 p-5 hover:border-blue-200 hover:shadow-sm transition-all">
         <div class="flex items-center gap-4">
@@ -135,8 +135,8 @@
                 </svg>
             </div>
             <div>
-                <div class="font-500 text-slate-800">Files</div>
-                <div class="text-xs text-slate-400 mt-0.5">Temporary file sharing</div>
+                <div class="font-500 text-slate-800 group-hover:text-blue-600 transition-colors">File Sharing</div>
+                <div class="text-xs text-slate-400 mt-0.5">Share files temporarily</div>
             </div>
             <svg class="w-4 h-4 text-slate-300 ml-auto group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -144,21 +144,43 @@
         </div>
     </a>
 
-    <!-- Projects - Coming Soon -->
-    <div class="bg-white rounded-xl border border-dashed border-slate-200 p-5 opacity-60">
+    <!-- My To-Do -->
+    <a href="{% url 'all_todos' %}"
+       class="group bg-white rounded-xl border border-slate-200 p-5 hover:border-indigo-200 hover:shadow-sm transition-all">
         <div class="flex items-center gap-4">
-            <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center">
-                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4l2 2 4-4"/>
                 </svg>
             </div>
             <div>
-                <div class="font-500 text-slate-500">Projects</div>
-                <div class="text-xs text-slate-400 mt-0.5">Project management</div>
+                <div class="font-500 text-slate-800 group-hover:text-indigo-600 transition-colors">To-Do List</div>
+                <div class="text-xs text-slate-400 mt-0.5">Personal &amp; shared tasks</div>
             </div>
-            <span class="ml-auto text-xs bg-slate-100 text-slate-400 px-2 py-1 rounded-full">Soon</span>
+            <svg class="w-4 h-4 text-slate-300 ml-auto group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
         </div>
-    </div>
+    </a>
+
+    <!-- Projects -->
+    <a href="{% url 'all_projects' %}"
+       class="group bg-white rounded-xl border border-slate-200 p-5 hover:border-violet-200 hover:shadow-sm transition-all">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center group-hover:bg-violet-100 transition-colors">
+                <svg class="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                </svg>
+            </div>
+            <div>
+                <div class="font-500 text-slate-800 group-hover:text-violet-600 transition-colors">Projects</div>
+                <div class="text-xs text-slate-400 mt-0.5">Task &amp; project management</div>
+            </div>
+            <svg class="w-4 h-4 text-slate-300 ml-auto group-hover:text-violet-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </div>
+    </a>
 
     {% if user.is_staff %}
     <!-- Users -->

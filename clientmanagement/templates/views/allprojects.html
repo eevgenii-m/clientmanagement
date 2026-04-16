@@ -1,0 +1,1048 @@
+{% extends "_basenorm.html" %}
+{% load static %}
+
+{% block page_title %}Projects{% endblock %}
+
+{% block extra_css %}
+<style>
+/* FIX 5: natural scroll — projects page is NOT a DataTables list */
+html, body { overflow: auto; height: auto; }
+
+/* ── Project status badges ─────────────────────────────────── */
+.proj-status-active     { background:#dcfce7; color:#15803d; }
+.proj-status-onhold     { background:#fef9c3; color:#92400e; }
+.proj-status-completed  { background:#dbeafe; color:#1d4ed8; }
+.proj-status-cancelled  { background:#f1f5f9; color:#64748b; }
+
+/* ── Task status selects ───────────────────────────────────── */
+.status-notstarted { background:#f1f5f9; color:#64748b; }
+.status-inprogress { background:#dbeafe; color:#1d4ed8; }
+.status-done       { background:#dcfce7; color:#15803d; }
+.status-blocked    { background:#fee2e2; color:#b91c1c; }
+.status-onhold     { background:#fef9c3; color:#92400e; }
+
+/* ── Priority ──────────────────────────────────────────────── */
+.priority-critical { background:#fee2e2; color:#b91c1c; }
+.priority-high     { background:#ffedd5; color:#c2410c; }
+.priority-medium   { background:#fef9c3; color:#92400e; }
+.priority-low      { background:#f0fdf4; color:#166534; }
+
+/* Shared badge */
+.badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px;
+         font-size:.7rem; font-weight:600; white-space:nowrap; }
+
+/* Inline select (task quick-edit) */
+.inline-select {
+    border:none; background:transparent; font-size:.75rem; font-weight:600;
+    font-family:'DM Sans',sans-serif; padding:2px 6px; border-radius:9999px;
+    cursor:pointer; appearance:none; -webkit-appearance:none; outline:none;
+}
+.inline-select:focus { box-shadow:0 0 0 2px rgba(37,99,235,.25); }
+
+/* Project colour dot */
+.proj-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+/* Drag handles */
+.drag-handle { cursor:grab; color:#cbd5e1; font-size:1rem; line-height:1;
+               padding:0 2px; user-select:none; flex-shrink:0; }
+.drag-handle:hover  { color:#94a3b8; }
+.drag-handle:active { cursor:grabbing; }
+
+/* Due date */
+.due-overdue { color:#dc2626; font-weight:600; }
+.due-soon    { color:#d97706; font-weight:600; }
+
+/* FIX 5: line-clamp-2 for task titles */
+.line-clamp-2 {
+    display:-webkit-box; -webkit-line-clamp:2;
+    -webkit-box-orient:vertical; overflow:hidden;
+}
+
+/* Sort header hover */
+th.sortable { cursor:pointer; user-select:none; }
+th.sortable:hover { color:#1e293b; }
+
+/* SortableJS */
+.sortable-ghost  { opacity:.35; background:#e2e8f0 !important; }
+.sortable-chosen { background:#f8fafc; }
+
+/* Task rows */
+.task-row { border-bottom:1px solid #f8fafc; }
+.task-row:hover td { background:#f8fafc; }
+
+/* Empty state */
+.empty-state { text-align:center; padding:3rem 1rem; color:#94a3b8; }
+
+/* ── Modals ────────────────────────────────────────────────── */
+.modal-backdrop {
+    position:fixed; inset:0; background:rgba(15,23,42,.45);
+    z-index:50; display:flex; align-items:center;
+    justify-content:center; padding:1rem;
+}
+.modal-box {
+    background:#fff; border-radius:12px; width:100%; max-width:520px;
+    box-shadow:0 20px 60px rgba(0,0,0,.18); overflow:hidden;
+}
+.modal-header {
+    padding:1.25rem 1.5rem 1rem; border-bottom:1px solid #e2e8f0;
+    display:flex; align-items:center; justify-content:space-between;
+}
+.modal-body   { padding:1.25rem 1.5rem; max-height:72vh; overflow-y:auto; }
+.modal-footer { padding:.75rem 1.5rem 1.25rem; display:flex; gap:.5rem; justify-content:flex-end; }
+
+/* Modal form fields */
+.mf-label { display:block; font-size:.8125rem; font-weight:500; color:#475569; margin-bottom:.3rem; }
+.mf-input {
+    display:block; width:100%; border:1px solid #e2e8f0; border-radius:8px;
+    padding:7px 11px; font-size:.875rem; color:#1e293b; background:#fff; outline:none;
+    font-family:'DM Sans',sans-serif; transition:border-color .15s, box-shadow .15s;
+}
+.mf-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+.mf-row  { margin-bottom:1rem; }
+.mf-2col { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+.mf-3col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem; }
+.mf-error { font-size:.75rem; color:#dc2626; margin-top:.25rem; display:none; }
+.mf-hint  { font-size:.7rem; color:#94a3b8; margin-top:.2rem; }
+
+/* Colour swatches */
+.color-swatch {
+    width:28px; height:28px; border-radius:6px; cursor:pointer;
+    border:3px solid transparent; transition:transform .1s, border-color .1s; flex-shrink:0;
+}
+.color-swatch:hover    { transform:scale(1.15); }
+.color-swatch.selected { border-color:#0f172a; }
+</style>
+{% endblock %}
+
+
+{% block body %}
+
+<!-- ── Sticky action bar ─────────────────────────────────────────── -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-4">
+<div class="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
+
+    <span class="text-sm font-semibold text-slate-800 mr-1">Projects</span>
+
+    <!-- CHANGE 4: Archived link with count -->
+    <a href="{% url 'archived_projects' %}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
+        </svg>
+        Archived
+        {% if archived_count %}
+        <span class="bg-slate-200 text-slate-600 text-xs px-1.5 py-0.5 rounded-full leading-none">{{ archived_count }}</span>
+        {% endif %}
+    </a>
+
+    <div class="flex-1"></div>
+
+    <!-- CHANGE 2: Refresh button -->
+    <button onclick="window.location.reload()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Refresh
+    </button>
+
+    <button onclick="openNewProjectModal()"
+            class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Project
+    </button>
+
+</div>
+</div>
+
+
+<!-- ── Projects list ─────────────────────────────────────────────── -->
+{% if not projects %}
+<div class="empty-state">
+    <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
+                 M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+    <div class="text-slate-500 font-medium mb-1">No projects yet</div>
+    <div class="text-sm">Click <strong>New Project</strong> to get started.</div>
+</div>
+{% else %}
+
+<div id="projects-sortable">
+{% for project in projects %}
+
+<div class="bg-white rounded-xl border border-slate-200 mb-3 overflow-hidden"
+     id="proj-{{ project.id }}" data-project-id="{{ project.id }}">
+
+    <!-- ── Project header ─────────────────────────────────── -->
+    <div class="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100 bg-white min-w-0">
+
+        <span class="drag-handle project-drag-handle" title="Drag to reorder">⠿</span>
+
+        <button onclick="toggleProject({{ project.id }})"
+                class="flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors" title="Expand / collapse">
+            <svg id="project-chevron-{{ project.id }}" class="w-4 h-4 transition-transform duration-200"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+
+        <span class="proj-dot" style="background:{{ project.color }}"></span>
+        <span class="font-semibold text-slate-800 text-sm truncate min-w-0">{{ project.title }}</span>
+
+        <span class="badge proj-status-{{ project.status }} hidden sm:inline-flex flex-shrink-0">{{ project.get_status_display }}</span>
+        <span class="badge priority-{{ project.priority }} hidden md:inline-flex flex-shrink-0">{{ project.get_priority_display }}</span>
+
+        {% if project.due_date %}
+        <span class="text-xs flex-shrink-0 hidden md:inline {% if project.due_date < today %}due-overdue{% endif %}">
+            Due {{ project.due_date|date:"M j" }}{% if project.due_date < today %} ⚠{% endif %}
+        </span>
+        {% endif %}
+
+        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full flex-shrink-0 hidden sm:inline"
+              id="badge-{{ project.id }}">{{ project.open_tasks_count }} open</span>
+
+        <div class="flex-1 min-w-0"></div>
+
+        <!-- Action buttons (FIX 6: always visible, icon-only on mobile) -->
+        <div class="flex items-center gap-1 flex-shrink-0">
+
+            <button onclick="openAddTaskModal({{ project.id }}, '{{ project.title|escapejs }}')"
+                    class="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span class="hidden sm:inline">Add task</span>
+            </button>
+
+            <!-- CHANGE 4: Archive button -->
+            <form method="POST" action="{% url 'edit_project' project.id %}" class="inline m-0">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="archive">
+                <button type="submit"
+                        onclick="return confirm('Archive \'{{ project.title|escapejs }}\'?')"
+                        class="inline-flex items-center gap-1 px-2 py-1 text-xs text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
+                    </svg>
+                    <span class="hidden sm:inline">Archive</span>
+                </button>
+            </form>
+
+            <button onclick="openEditProjectModal(
+                        {{ project.id }},
+                        '{{ project.title|escapejs }}',
+                        '{{ project.description|escapejs }}',
+                        '{{ project.color }}',
+                        '{{ project.status }}',
+                        '{{ project.priority }}',
+                        '{{ project.due_date|date:"Y-m-d"|default:"" }}')"
+                    class="inline-flex items-center gap-1 px-2 py-1 text-xs text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
+                             m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                <span class="hidden sm:inline">Edit</span>
+            </button>
+
+            <form method="POST" action="{% url 'delete_project' project.id %}" class="inline m-0">
+                {% csrf_token %}
+                <button type="submit"
+                        onclick="return confirm('Delete \'{{ project.title|escapejs }}\' and all its tasks?\nThis cannot be undone.')"
+                        class="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858
+                                 L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    <span class="hidden sm:inline">Delete</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Task body (CHANGE 4: collapse/expand target) ──── -->
+    <div id="project-body-{{ project.id }}">
+    {% with tasks=project.tasks.all %}
+    {% if tasks %}
+
+    <!-- CHANGE 5: table-fixed with colgroup for aligned columns -->
+    <div class="overflow-x-auto">
+    <table class="w-full table-fixed min-w-[300px]">
+        <colgroup>
+            <col style="width:28px">
+            <col><!-- task name — flexible -->
+            <col class="hidden md:table-column" style="width:120px">
+            <col class="hidden md:table-column" style="width:100px">
+            <col class="hidden md:table-column" style="width:110px"><!-- created by -->
+            <col class="hidden md:table-column" style="width:120px">
+            <col class="hidden md:table-column" style="width:85px">
+            <col style="width:60px">
+        </colgroup>
+        <!-- CHANGE 3: sortable column headers -->
+        <thead>
+        <tr class="border-b border-slate-100 bg-slate-50">
+            <th class="px-1 py-2 w-7"></th>
+            <th class="sort-header sortable text-left px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide"
+                data-col="title" onclick="sortTasks({{ project.id }}, 'title')">
+                Task <span class="sort-indicator text-blue-500"></span>
+            </th>
+            <th class="sort-header sortable text-left px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden md:table-cell"
+                data-col="status" onclick="sortTasks({{ project.id }}, 'status')">
+                Status <span class="sort-indicator text-blue-500"></span>
+            </th>
+            <th class="sort-header sortable text-left px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden md:table-cell"
+                data-col="priority" onclick="sortTasks({{ project.id }}, 'priority')">
+                Priority <span class="sort-indicator text-blue-500"></span>
+            </th>
+            <th class="text-left px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden md:table-cell">
+                Created by
+            </th>
+            <th class="sort-header sortable text-left px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden lg:table-cell"
+                data-col="assigned" onclick="sortTasks({{ project.id }}, 'assigned')">
+                Assigned <span class="sort-indicator text-blue-500"></span>
+            </th>
+            <th class="sort-header sortable text-left px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden lg:table-cell"
+                data-col="due" onclick="sortTasks({{ project.id }}, 'due')">
+                Due <span class="sort-indicator text-blue-500"></span>
+            </th>
+            <th class="px-2 py-2"></th>
+        </tr>
+        </thead>
+        <tbody class="tasks-sortable" id="project-tasks-{{ project.id }}" data-project="{{ project.id }}">
+        {% for task in tasks %}{% if not task.parent_task_id %}
+        <tr class="task-row"
+            id="task-row-{{ task.id }}"
+            data-task-id="{{ task.id }}"
+            data-project="{{ project.id }}"
+            data-title="{{ task.title|escapejs }}"
+            data-status="{{ task.status }}"
+            data-priority="{{ task.priority }}"
+            data-assigned="{% if task.assigned_to %}{% firstof task.assigned_to.get_full_name task.assigned_to.username %}{% endif %}"
+            data-due="{{ task.due_date|date:'Y-m-d'|default:'' }}"
+            data-created="{{ task.created_by.get_full_name|default:''|escapejs }}">
+            <td class="px-1 py-2.5 w-7">
+                <span class="drag-handle task-drag-handle" title="Drag to reorder">⠿</span>
+            </td>
+            <!-- CHANGE 5: line-clamp-2 on task title cell -->
+            <td class="px-3 py-2">
+                <div class="text-sm font-medium text-slate-800 line-clamp-2 cursor-pointer hover:text-blue-600"
+                     onclick="openEditTaskModal({{ task.id }}, {{ project.id }})">{{ task.title }}</div>
+                {% if task.description %}
+                <div class="text-xs text-slate-400 truncate mt-0.5">{{ task.description|truncatechars:60 }}</div>
+                {% endif %}
+            </td>
+            <td class="px-3 py-2 hidden md:table-cell">
+                <select class="inline-select status-{{ task.status }}"
+                        onchange="quickUpdateTask({{ task.id }}, 'status', this.value, this)">
+                    {% for val, label in status_choices %}
+                    <option value="{{ val }}"{% if task.status == val %} selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td class="px-3 py-2 hidden md:table-cell">
+                <select class="inline-select priority-{{ task.priority }}"
+                        onchange="quickUpdateTask({{ task.id }}, 'priority', this.value, this)">
+                    {% for val, label in priority_choices %}
+                    <option value="{{ val }}"{% if task.priority == val %} selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td class="px-3 py-2 hidden md:table-cell">
+                {% if task.created_by %}
+                <div class="flex items-center gap-1.5">
+                    <div class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 flex-shrink-0">
+                        {{ task.created_by.first_name|first|upper }}{{ task.created_by.last_name|first|upper }}
+                    </div>
+                    <span class="text-xs text-slate-500 hidden lg:inline">
+                        {{ task.created_by.get_full_name|default:task.created_by.username }}
+                    </span>
+                </div>
+                {% else %}
+                <span class="text-xs text-slate-300">—</span>
+                {% endif %}
+            </td>
+            <td class="px-3 py-2 hidden lg:table-cell text-xs text-slate-500 truncate">
+                {% if task.assigned_to %}{% firstof task.assigned_to.get_full_name task.assigned_to.username %}{% else %}&mdash;{% endif %}
+            </td>
+            <td class="px-3 py-2 hidden lg:table-cell text-xs {% if task.is_overdue %}due-overdue{% elif task.is_due_soon %}due-soon{% else %}text-slate-500{% endif %}">
+                {% if task.due_date %}{{ task.due_date|date:"M j" }}{% else %}&mdash;{% endif %}
+            </td>
+            <td class="px-1 py-2 text-right whitespace-nowrap">
+                <button onclick="openEditTaskModal({{ task.id }}, {{ project.id }})"
+                        class="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded" title="Edit">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
+                                 m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </button>
+                <button onclick="deleteTask({{ task.id }}, {{ project.id }}, '{{ task.title|escapejs }}')"
+                        class="text-slate-400 hover:text-red-500 transition-colors p-1 rounded" title="Delete">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </td>
+        </tr>
+        {% endif %}{% endfor %}
+        </tbody>
+    </table>
+    </div><!-- end overflow-x-auto -->
+
+    {% else %}
+    <div class="px-6 py-4 text-sm text-slate-400 italic">
+        No tasks yet — click <strong>Add task</strong> to add one.
+    </div>
+    {% endif %}
+    {% endwith %}
+    </div>
+
+</div><!-- end project card -->
+{% endfor %}
+</div><!-- end #projects-sortable -->
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     NEW PROJECT MODAL
+══════════════════════════════════════════════════════════════ -->
+<div id="modal-new-project" class="modal-backdrop" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="text-sm font-semibold text-slate-800">New Project</span>
+      <button onclick="closeModal('modal-new-project')" class="text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="mf-row">
+        <label class="mf-label" for="np-title">Project name <span class="text-red-500">*</span></label>
+        <input type="text" id="np-title" class="mf-input" placeholder="e.g. Network upgrade" maxlength="160">
+        <div class="mf-error" id="np-title-err"></div>
+      </div>
+      <div class="mf-row">
+        <label class="mf-label" for="np-desc">Description <span class="text-slate-400 font-normal">(optional)</span></label>
+        <textarea id="np-desc" class="mf-input" rows="2" placeholder="Brief overview…"></textarea>
+      </div>
+      <div class="mf-3col mf-row">
+        <div>
+          <label class="mf-label" for="np-status">Status</label>
+          <select id="np-status" class="mf-input">
+            {% for val, label in project_status_choices %}
+            <option value="{{ val }}"{% if val == 'active' %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mf-label" for="np-priority">Priority</label>
+          <select id="np-priority" class="mf-input">
+            {% for val, label in project_priority_choices %}
+            <option value="{{ val }}"{% if val == 'medium' %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mf-label" for="np-due">Due date <span class="text-slate-400 font-normal">(optional)</span></label>
+          <input type="date" id="np-due" class="mf-input">
+        </div>
+      </div>
+      <div class="mf-row">
+        <label class="mf-label">Colour</label>
+        <div class="flex flex-wrap gap-2 mt-1" id="np-color-swatches">
+          {% for hex, name in project_colors %}
+          <span class="color-swatch{% if forloop.first %} selected{% endif %}"
+                style="background:{{ hex }}" title="{{ name }}" data-hex="{{ hex }}"
+                onclick="selectSwatch(this,'np-color-swatches','np-color')"></span>
+          {% endfor %}
+        </div>
+        <input type="hidden" id="np-color" value="{{ project_colors.0.0 }}">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('modal-new-project')"
+              class="px-4 py-1.5 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancel</button>
+      <button onclick="submitNewProject()"
+              class="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Create project</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     EDIT PROJECT MODAL
+══════════════════════════════════════════════════════════════ -->
+<div id="modal-edit-project" class="modal-backdrop" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="text-sm font-semibold text-slate-800">Edit Project</span>
+      <button onclick="closeModal('modal-edit-project')" class="text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ep-id">
+      <div class="mf-row">
+        <label class="mf-label" for="ep-title">Project name <span class="text-red-500">*</span></label>
+        <input type="text" id="ep-title" class="mf-input" maxlength="160">
+        <div class="mf-error" id="ep-title-err"></div>
+      </div>
+      <div class="mf-row">
+        <label class="mf-label" for="ep-desc">Description <span class="text-slate-400 font-normal">(optional)</span></label>
+        <textarea id="ep-desc" class="mf-input" rows="2"></textarea>
+      </div>
+      <div class="mf-3col mf-row">
+        <div>
+          <label class="mf-label" for="ep-status">Status</label>
+          <select id="ep-status" class="mf-input">
+            {% for val, label in project_status_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mf-label" for="ep-priority">Priority</label>
+          <select id="ep-priority" class="mf-input">
+            {% for val, label in project_priority_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mf-label" for="ep-due">Due date <span class="text-slate-400 font-normal">(optional)</span></label>
+          <input type="date" id="ep-due" class="mf-input">
+        </div>
+      </div>
+      <div class="mf-row">
+        <label class="mf-label">Colour</label>
+        <div class="flex flex-wrap gap-2 mt-1" id="ep-color-swatches">
+          {% for hex, name in project_colors %}
+          <span class="color-swatch" style="background:{{ hex }}" title="{{ name }}" data-hex="{{ hex }}"
+                onclick="selectSwatch(this,'ep-color-swatches','ep-color')"></span>
+          {% endfor %}
+        </div>
+        <input type="hidden" id="ep-color" value="">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('modal-edit-project')"
+              class="px-4 py-1.5 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancel</button>
+      <button onclick="submitEditProject()"
+              class="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Save</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     ADD TASK MODAL
+══════════════════════════════════════════════════════════════ -->
+<div id="modal-add-task" class="modal-backdrop" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="text-sm font-semibold text-slate-800">Add Task — <span id="at-project-name" class="text-blue-600"></span></span>
+      <button onclick="closeModal('modal-add-task')" class="text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="at-project-id">
+      <div class="mf-row">
+        <label class="mf-label" for="at-title">Task title <span class="text-red-500">*</span></label>
+        <input type="text" id="at-title" class="mf-input" placeholder="What needs to be done?" maxlength="200">
+        <div class="mf-error" id="at-title-err"></div>
+      </div>
+      <div class="mf-row">
+        <label class="mf-label" for="at-desc">Description <span class="text-slate-400 font-normal">(optional)</span></label>
+        <textarea id="at-desc" class="mf-input" rows="2" placeholder="Details, notes…"></textarea>
+      </div>
+      <div class="mf-2col mf-row">
+        <div>
+          <label class="mf-label" for="at-status">Status</label>
+          <select id="at-status" class="mf-input">
+            {% for val, label in status_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mf-label" for="at-priority">Priority</label>
+          <select id="at-priority" class="mf-input">
+            {% for val, label in priority_choices %}
+            <option value="{{ val }}"{% if val == 'medium' %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="mf-row">
+        <label class="mf-label" for="at-assigned">Assign to <span class="text-slate-400 font-normal">(optional)</span></label>
+        <select id="at-assigned" class="mf-input">
+          <option value="">— Unassigned —</option>
+          {% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="mf-2col mf-row">
+        <div>
+          <label class="mf-label" for="at-start">Start date <span class="text-slate-400 font-normal">(optional)</span></label>
+          <input type="date" id="at-start" class="mf-input">
+          <span class="mf-hint">Leave blank to set later</span>
+        </div>
+        <div>
+          <label class="mf-label" for="at-due">Due date <span class="text-slate-400 font-normal">(optional)</span></label>
+          <input type="date" id="at-due" class="mf-input">
+          <span class="mf-hint">Leave blank to set later</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('modal-add-task')"
+              class="px-4 py-1.5 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancel</button>
+      <button onclick="submitAddTask()"
+              class="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Add task</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     EDIT TASK MODAL
+══════════════════════════════════════════════════════════════ -->
+<div id="modal-edit-task" class="modal-backdrop" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="text-sm font-semibold text-slate-800">Edit Task</span>
+      <button onclick="closeModal('modal-edit-task')" class="text-slate-400 hover:text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="et-task-id">
+      <input type="hidden" id="et-project-id">
+      <div class="mf-row">
+        <label class="mf-label" for="et-title">Task title <span class="text-red-500">*</span></label>
+        <input type="text" id="et-title" class="mf-input" maxlength="200">
+        <div class="mf-error" id="et-title-err"></div>
+      </div>
+      <div class="mf-row">
+        <label class="mf-label" for="et-desc">Description <span class="text-slate-400 font-normal">(optional)</span></label>
+        <textarea id="et-desc" class="mf-input" rows="2"></textarea>
+      </div>
+      <div class="mf-2col mf-row">
+        <div>
+          <label class="mf-label" for="et-status">Status</label>
+          <select id="et-status" class="mf-input">
+            {% for val, label in status_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mf-label" for="et-priority">Priority</label>
+          <select id="et-priority" class="mf-input">
+            {% for val, label in priority_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="mf-row">
+        <label class="mf-label" for="et-assigned">Assign to <span class="text-slate-400 font-normal">(optional)</span></label>
+        <select id="et-assigned" class="mf-input">
+          <option value="">— Unassigned —</option>
+          {% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="mf-2col mf-row">
+        <div>
+          <label class="mf-label" for="et-start">Start date <span class="text-slate-400 font-normal">(optional)</span></label>
+          <input type="date" id="et-start" class="mf-input">
+          <span class="mf-hint">Leave blank to set later</span>
+        </div>
+        <div>
+          <label class="mf-label" for="et-due">Due date <span class="text-slate-400 font-normal">(optional)</span></label>
+          <input type="date" id="et-due" class="mf-input">
+          <span class="mf-hint">Leave blank to set later</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('modal-edit-task')"
+              class="px-4 py-1.5 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancel</button>
+      <button onclick="submitEditTask()"
+              class="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Save</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_javascript %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+const CSRF = '{{ csrf_token }}';
+
+// ── Task data cache ──────────────────────────────────────────────
+const taskCache = {};
+{% for project in projects %}
+{% for task in project.tasks.all %}{% if not task.parent_task_id %}
+taskCache[{{ task.id }}] = {
+    title:          '{{ task.title|escapejs }}',
+    description:    '{{ task.description|escapejs }}',
+    status:         '{{ task.status }}',
+    priority:       '{{ task.priority }}',
+    assigned_to_id: '{{ task.assigned_to_id|default:"" }}',
+    start_date:     '{{ task.start_date|date:"Y-m-d"|default:"" }}',
+    due_date:       '{{ task.due_date|date:"Y-m-d"|default:"" }}',
+    project_id:     {{ project.id }},
+};
+{% endif %}{% endfor %}
+{% endfor %}
+
+// ── Utilities ────────────────────────────────────────────────────
+function csrfFetch(url, body) {
+    return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(body),
+    });
+}
+function showErr(id, msg) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = msg ? '' : 'none';
+}
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+document.querySelectorAll('.modal-backdrop').forEach(function(m) {
+    m.addEventListener('click', function(e) { if (e.target === m) closeModal(m.id); });
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-backdrop').forEach(function(m) {
+            if (m.style.display !== 'none') closeModal(m.id);
+        });
+    }
+});
+function selectSwatch(el, groupId, hiddenId) {
+    document.querySelectorAll('#' + groupId + ' .color-swatch').forEach(function(s) { s.classList.remove('selected'); });
+    el.classList.add('selected');
+    document.getElementById(hiddenId).value = el.dataset.hex;
+}
+
+// ── CHANGE 4: Collapse/expand with localStorage ──────────────────
+function getCollapseKey(pid) { return 'project_collapsed_{{ request.user.id }}_' + pid; }
+function isCollapsed(pid)    { return localStorage.getItem(getCollapseKey(pid)) === 'true'; }
+function setCollapsed(pid, v){ localStorage.setItem(getCollapseKey(pid), v ? 'true' : 'false'); }
+
+function toggleProject(pid) {
+    var content = document.getElementById('project-body-' + pid);
+    var chevron = document.getElementById('project-chevron-' + pid);
+    var nowCollapsed = !isCollapsed(pid);
+    setCollapsed(pid, nowCollapsed);
+    if (content) content.style.display = nowCollapsed ? 'none' : '';
+    if (chevron) chevron.style.transform = nowCollapsed ? 'rotate(-90deg)' : '';
+}
+
+// ── Client-side column sort (scoped per project) ─────────────────
+function sortTasks(projectId, column) {
+    var tbody = document.getElementById('project-tasks-' + projectId);
+    if (!tbody) return;
+
+    var currentDir = tbody.dataset.sortDir || 'asc';
+    var currentCol = tbody.dataset.sortCol || '';
+    var dir = (currentCol === column && currentDir === 'asc') ? 'desc' : 'asc';
+    tbody.dataset.sortDir = dir;
+    tbody.dataset.sortCol = column;
+
+    var priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    var statusOrder   = { notstarted: 0, inprogress: 1, onhold: 2, blocked: 3, done: 4 };
+
+    var rows = Array.from(tbody.querySelectorAll('tr[data-task-id]'));
+    rows.sort(function(a, b) {
+        var av, bv;
+        if (column === 'title') {
+            av = (a.dataset.title || '').toLowerCase();
+            bv = (b.dataset.title || '').toLowerCase();
+        } else if (column === 'status') {
+            av = statusOrder[a.dataset.status] !== undefined ? statusOrder[a.dataset.status] : 99;
+            bv = statusOrder[b.dataset.status] !== undefined ? statusOrder[b.dataset.status] : 99;
+        } else if (column === 'priority') {
+            av = priorityOrder[a.dataset.priority] !== undefined ? priorityOrder[a.dataset.priority] : 99;
+            bv = priorityOrder[b.dataset.priority] !== undefined ? priorityOrder[b.dataset.priority] : 99;
+        } else if (column === 'assigned') {
+            av = (a.dataset.assigned || 'zzz').toLowerCase();
+            bv = (b.dataset.assigned || 'zzz').toLowerCase();
+        } else if (column === 'due') {
+            av = a.dataset.due || '9999-12-31';
+            bv = b.dataset.due || '9999-12-31';
+        } else {
+            av = (a.dataset[column] || '').toLowerCase();
+            bv = (b.dataset[column] || '').toLowerCase();
+        }
+        var result = av < bv ? -1 : av > bv ? 1 : 0;
+        return dir === 'asc' ? result : -result;
+    });
+
+    rows.forEach(function(row) { tbody.appendChild(row); });
+
+    // Update sort indicators — only within this project's table
+    var table = tbody.closest('table');
+    if (table) {
+        table.querySelectorAll('.sort-indicator').forEach(function(el) { el.textContent = ''; });
+        var activeInd = table.querySelector('.sort-header[data-col="' + column + '"] .sort-indicator');
+        if (activeInd) activeInd.textContent = dir === 'asc' ? ' ↑' : ' ↓';
+    }
+}
+
+// ── DOMContentLoaded: restore collapse + init SortableJS ─────────
+document.addEventListener('DOMContentLoaded', function() {
+    // Restore collapse state
+    {% for project in projects %}
+    (function() {
+        var pid = {{ project.id }};
+        var content = document.getElementById('project-body-' + pid);
+        var chevron = document.getElementById('project-chevron-' + pid);
+        if (content && chevron && isCollapsed(pid)) {
+            content.style.display = 'none';
+            chevron.style.transform = 'rotate(-90deg)';
+        }
+    })();
+    {% endfor %}
+
+    // SortableJS — projects
+    var pList = document.getElementById('projects-sortable');
+    if (pList && typeof Sortable !== 'undefined') {
+        Sortable.create(pList, {
+            handle: '.project-drag-handle', animation: 150,
+            onEnd: function() {
+                var order = [];
+                pList.querySelectorAll('[data-project-id]').forEach(function(el, idx) {
+                    order.push({ id: parseInt(el.dataset.projectId), order: idx });
+                });
+                fetch('/projects/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                    body: JSON.stringify({ type: 'project', order: order }),
+                });
+            }
+        });
+    }
+
+    // SortableJS — task rows
+    if (typeof Sortable !== 'undefined') {
+        document.querySelectorAll('.tasks-sortable').forEach(function(tbody) {
+            Sortable.create(tbody, {
+                handle: '.task-drag-handle', animation: 150, group: 'tasks',
+                onEnd: function() {
+                    var order = [];
+                    tbody.querySelectorAll('[data-task-id]').forEach(function(el, idx) {
+                        order.push({ id: parseInt(el.dataset.taskId), order: idx });
+                    });
+                    fetch('/projects/reorder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                        body: JSON.stringify({ type: 'task', order: order }),
+                    });
+                }
+            });
+        });
+    }
+});
+
+// ══════════════════════════════════════════════════════════════════
+// NEW PROJECT
+// ══════════════════════════════════════════════════════════════════
+function openNewProjectModal() {
+    document.getElementById('np-title').value = '';
+    document.getElementById('np-desc').value  = '';
+    document.getElementById('np-status').value = 'active';
+    document.getElementById('np-priority').value = 'medium';
+    document.getElementById('np-due').value = '';
+    showErr('np-title-err', '');
+    var sw = document.querySelectorAll('#np-color-swatches .color-swatch');
+    sw.forEach(function(s, i) { s.classList.toggle('selected', i === 0); });
+    if (sw[0]) document.getElementById('np-color').value = sw[0].dataset.hex;
+    document.getElementById('modal-new-project').style.display = 'flex';
+    setTimeout(function() { document.getElementById('np-title').focus(); }, 50);
+}
+function submitNewProject() {
+    var title = document.getElementById('np-title').value.trim();
+    if (!title) { showErr('np-title-err', 'Project name is required.'); return; }
+    showErr('np-title-err', '');
+    csrfFetch('{% url "all_projects" %}', {
+        title: title,
+        description: document.getElementById('np-desc').value.trim(),
+        color:    document.getElementById('np-color').value,
+        status:   document.getElementById('np-status').value,
+        priority: document.getElementById('np-priority').value,
+        due_date: document.getElementById('np-due').value,
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (!d.ok) { showErr('np-title-err', d.error || 'Error.'); return; }
+        window.location.reload();
+    })
+    .catch(function() { window.location.reload(); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EDIT PROJECT
+// ══════════════════════════════════════════════════════════════════
+function openEditProjectModal(id, title, desc, color, status, priority, dueDate) {
+    document.getElementById('ep-id').value       = id;
+    document.getElementById('ep-title').value    = title;
+    document.getElementById('ep-desc').value     = desc;
+    document.getElementById('ep-status').value   = status;
+    document.getElementById('ep-priority').value = priority;
+    document.getElementById('ep-due').value      = dueDate;
+    document.getElementById('ep-color').value    = color;
+    showErr('ep-title-err', '');
+    document.querySelectorAll('#ep-color-swatches .color-swatch').forEach(function(s) {
+        s.classList.toggle('selected', s.dataset.hex === color);
+    });
+    document.getElementById('modal-edit-project').style.display = 'flex';
+    setTimeout(function() { document.getElementById('ep-title').focus(); }, 50);
+}
+function submitEditProject() {
+    var id = document.getElementById('ep-id').value;
+    var title = document.getElementById('ep-title').value.trim();
+    if (!title) { showErr('ep-title-err', 'Project name is required.'); return; }
+    showErr('ep-title-err', '');
+    csrfFetch('/projects/' + id + '/edit', {
+        title: title,
+        description: document.getElementById('ep-desc').value.trim(),
+        color:    document.getElementById('ep-color').value,
+        status:   document.getElementById('ep-status').value,
+        priority: document.getElementById('ep-priority').value,
+        due_date: document.getElementById('ep-due').value,
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (!d.ok) { showErr('ep-title-err', d.error || 'Error.'); return; }
+        window.location.reload();
+    })
+    .catch(function() { window.location.reload(); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ADD TASK
+// ══════════════════════════════════════════════════════════════════
+function openAddTaskModal(projectId, projectName) {
+    document.getElementById('at-project-id').value = projectId;
+    document.getElementById('at-project-name').textContent = projectName;
+    ['at-title','at-desc','at-start','at-due'].forEach(function(id) {
+        document.getElementById(id).value = '';
+    });
+    document.getElementById('at-status').value   = 'notstarted';
+    document.getElementById('at-priority').value = 'medium';
+    document.getElementById('at-assigned').value = '';
+    showErr('at-title-err', '');
+    document.getElementById('modal-add-task').style.display = 'flex';
+    setTimeout(function() { document.getElementById('at-title').focus(); }, 50);
+}
+function submitAddTask() {
+    var pid   = document.getElementById('at-project-id').value;
+    var title = document.getElementById('at-title').value.trim();
+    if (!title) { showErr('at-title-err', 'Task title is required.'); return; }
+    showErr('at-title-err', '');
+    csrfFetch('/projects/' + pid + '/task/add', {
+        title: title,
+        description:    document.getElementById('at-desc').value.trim(),
+        status:         document.getElementById('at-status').value,
+        priority:       document.getElementById('at-priority').value,
+        assigned_to_id: document.getElementById('at-assigned').value,
+        start_date:     document.getElementById('at-start').value,
+        due_date:       document.getElementById('at-due').value,
+    })
+    .then(function() { window.location.reload(); })
+    .catch(function() { window.location.reload(); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EDIT TASK
+// ══════════════════════════════════════════════════════════════════
+function openEditTaskModal(taskId, projectId) {
+    var t = taskCache[taskId];
+    if (!t) { alert('Task data not found — please reload.'); return; }
+    document.getElementById('et-task-id').value    = taskId;
+    document.getElementById('et-project-id').value = projectId;
+    document.getElementById('et-title').value       = t.title;
+    document.getElementById('et-desc').value        = t.description;
+    document.getElementById('et-status').value      = t.status;
+    document.getElementById('et-priority').value    = t.priority;
+    document.getElementById('et-assigned').value    = t.assigned_to_id || '';
+    document.getElementById('et-start').value       = t.start_date || '';
+    document.getElementById('et-due').value         = t.due_date || '';
+    showErr('et-title-err', '');
+    document.getElementById('modal-edit-task').style.display = 'flex';
+    setTimeout(function() { document.getElementById('et-title').focus(); }, 50);
+}
+function submitEditTask() {
+    var tid   = document.getElementById('et-task-id').value;
+    var title = document.getElementById('et-title').value.trim();
+    if (!title) { showErr('et-title-err', 'Task title is required.'); return; }
+    showErr('et-title-err', '');
+    csrfFetch('/projects/task/' + tid + '/edit', {
+        title: title,
+        description:    document.getElementById('et-desc').value.trim(),
+        status:         document.getElementById('et-status').value,
+        priority:       document.getElementById('et-priority').value,
+        assigned_to_id: document.getElementById('et-assigned').value,
+        start_date:     document.getElementById('et-start').value,
+        due_date:       document.getElementById('et-due').value,
+    })
+    .then(function() { window.location.reload(); })
+    .catch(function() { window.location.reload(); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// QUICK STATUS/PRIORITY (inline selects — no reload)
+// ══════════════════════════════════════════════════════════════════
+function quickUpdateTask(taskId, field, value, selectEl) {
+    var oldCls = Array.from(selectEl.classList).find(function(c) { return c.startsWith(field + '-'); });
+    if (oldCls) selectEl.classList.remove(oldCls);
+    selectEl.classList.add(field + '-' + value);
+    if (taskCache[taskId]) taskCache[taskId][field] = value;
+
+    var payload = { title: (taskCache[taskId] && taskCache[taskId].title) || '(task)' };
+    payload[field] = value;
+
+    csrfFetch('/projects/task/' + taskId + '/edit', payload)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.ok) console.error('quickUpdateTask:', d.error);
+            var row = document.getElementById('task-row-' + taskId);
+            if (row) refreshBadge(row.dataset.project);
+        });
+}
+function refreshBadge(pid) {
+    var tbody = document.getElementById('project-tasks-' + pid);
+    if (!tbody) return;
+    var rows = tbody.querySelectorAll('[data-task-id]');
+    var open = 0;
+    rows.forEach(function(r) {
+        var sel = r.querySelector('select[onchange*="status"]');
+        if (sel && sel.value !== 'done') open++;
+    });
+    var badge = document.getElementById('badge-' + pid);
+    if (badge) badge.textContent = open + ' open';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DELETE TASK
+// ══════════════════════════════════════════════════════════════════
+function deleteTask(taskId, projectId, title) {
+    if (!confirm('Delete task "' + title + '"?')) return;
+    csrfFetch('/projects/task/' + taskId + '/delete', {})
+        .then(function() { window.location.reload(); })
+        .catch(function() { window.location.reload(); });
+}
+</script>
+{% endblock %}

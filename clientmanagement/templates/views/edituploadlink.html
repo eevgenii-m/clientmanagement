@@ -1,0 +1,88 @@
+{% extends "_basenarrow.html" %}
+{% load static %}
+
+{% block page_title %}Edit Upload Link{% endblock %}
+
+{% block extra_css %}
+<style>
+.mf-label { display:block; font-size:.8125rem; font-weight:500; color:#475569; margin-bottom:.3rem; }
+.mf-input {
+    display:block; width:100%; border:1px solid #e2e8f0; border-radius:8px;
+    padding:8px 12px; font-size:.875rem; color:#1e293b; background:#fff; outline:none;
+    font-family:'DM Sans',sans-serif; transition:border-color .15s, box-shadow .15s;
+}
+.mf-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+.mf-help { font-size:.75rem; color:#94a3b8; margin-top:.25rem; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+<!-- Sticky action bar -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
+<div class="max-w-5xl mx-auto flex items-center gap-3">
+
+    <a href="{% url 'view_upload_link' linkuuid=link.unid %}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mr-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to link
+    </a>
+
+    <span class="text-sm font-semibold text-slate-800">Edit Upload Link</span>
+
+    <div class="flex-1"></div>
+
+    <a href="{% url 'view_upload_link' linkuuid=link.unid %}"
+       class="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+        Cancel
+    </a>
+
+    <button type="submit" form="edit-link-form"
+            class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Save
+    </button>
+
+</div>
+</div>
+
+<!-- Form card -->
+<div class="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+    <form id="edit-link-form" method="POST">
+        {% csrf_token %}
+
+        <div class="mb-5">
+            <label class="mf-label" for="id_title">Title / Purpose <span class="text-red-500">*</span></label>
+            <input type="text" name="title" id="id_title" class="mf-input" maxlength="120" required
+                   value="{{ link.title }}">
+        </div>
+
+        <div class="mb-5">
+            <label class="mf-label" for="id_description">Instructions for client</label>
+            <textarea name="description" id="id_description" rows="4" class="mf-input"
+                      placeholder="Optional instructions shown on the upload page…">{{ link.description }}</textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-5">
+            <div>
+                <label class="mf-label" for="id_expires_days">Extend expiry by (days)</label>
+                <input type="number" name="expires_days" id="id_expires_days" class="mf-input"
+                       min="1" max="90" placeholder="Leave blank to keep current">
+                <div class="mf-help">Current expiry: {{ link.expires_on|date:"N j, Y" }}. Enter days from today to change it.</div>
+            </div>
+            <div>
+                <label class="mf-label" for="id_max_files">Max files</label>
+                <input type="number" name="max_files" id="id_max_files" class="mf-input"
+                       min="1" max="50" value="{{ link.max_files }}">
+                <div class="mf-help">1–50 files.</div>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+{% endblock %}

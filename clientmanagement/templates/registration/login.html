@@ -1,13 +1,147 @@
-{% extends "_basenarrow.html" %}{% block page_title %}Log in to CMS Infotek{% endblock %}{% load static %} {% block extra_css %}{% endblock %} {% block body %} {% csrf_token %}
-<h2 class="text-center">Welcome to the Infotek Client Management System</h2>
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/png" href="{% static 'img/base/favicon.ico' %}" />
+    <title>Sign in — Infotek Solutions & Support</title>
 
-<form method="post" action="{% url 'login' %}">
-    {% csrf_token %} {{ form.as_p }}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['DM Sans', 'ui-sans-serif', 'system-ui'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <button type="submit" class="button round">Log in</button>
-    <input type="hidden" name="next" value="{{ next }}" />
-</form>
+    <style>
+        body { font-family: 'DM Sans', sans-serif; }
 
-<p><a href="{% url 'password_reset' %}">Lost password?</a></p>
+        .field-input {
+            display: block;
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.9375rem;
+            color: #1e293b;
+            background: #ffffff;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .field-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+        .field-input.has-error {
+            border-color: #ef4444;
+        }
+        .field-input.has-error:focus {
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+        }
+    </style>
+</head>
 
-{% endblock %}
+<body class="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+
+    <!-- Card -->
+    <div class="w-full max-w-sm">
+
+        <!-- Logo / brand -->
+        <div class="flex flex-col items-center mb-8">
+            <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4 shadow-sm">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/>
+                </svg>
+            </div>
+            <h1 class="text-xl font-semibold text-slate-800">Infotek Portal</h1>
+            <p class="text-sm text-slate-500 mt-0.5">Sign in to your account</p>
+        </div>
+
+        <!-- Form card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+
+            <!-- Non-field errors -->
+            {% if form.non_field_errors %}
+            <div class="mb-5 flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>{{ form.non_field_errors|join:", " }}</span>
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'login' %}" autocomplete="on" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}" />
+
+                <!-- Username -->
+                <div class="mb-5">
+                    <label for="id_username" class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+                        Username
+                    </label>
+                    <input type="text"
+                           id="id_username"
+                           name="username"
+                           value="{{ form.username.value|default:'' }}"
+                           autocomplete="username"
+                           autofocus
+                           class="field-input {% if form.username.errors %}has-error{% endif %}">
+                    {% if form.username.errors %}
+                    <p class="mt-1.5 text-xs text-red-600">{{ form.username.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Password -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="id_password" class="block text-xs font-medium text-slate-500 uppercase tracking-wider">
+                            Password
+                        </label>
+                        <a href="{% url 'password_reset' %}"
+                           class="text-xs text-blue-600 hover:text-blue-800 transition-colors">
+                            Forgot password?
+                        </a>
+                    </div>
+                    <input type="password"
+                           id="id_password"
+                           name="password"
+                           autocomplete="current-password"
+                           class="field-input {% if form.password.errors %}has-error{% endif %}">
+                    {% if form.password.errors %}
+                    <p class="mt-1.5 text-xs text-red-600">{{ form.password.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Submit -->
+                <button type="submit"
+                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm">
+                    Sign in
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-xs text-slate-400 mt-6">
+            Infotek Solutions & Support &mdash; Internal IT Portal
+        </p>
+
+    </div>
+
+</body>
+</html>

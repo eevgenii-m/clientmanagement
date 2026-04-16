@@ -1,0 +1,111 @@
+{% extends "_basenorm.html" %}
+{% load static %}
+
+{% block page_title %}Upload Links{% endblock %}
+
+{% block extra_css %}
+<style>
+html, body { overflow: hidden; height: 100%; }
+
+.status-active  { background:#dcfce7; color:#15803d; }
+.status-expired { background:#fee2e2; color:#b91c1c; }
+.status-inactive { background:#f1f5f9; color:#64748b; }
+
+.badge { display:inline-flex; align-items:center; padding:1px 7px; border-radius:9999px;
+         font-size:.7rem; font-weight:600; white-space:nowrap; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+<!-- Sticky header -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-4">
+<div class="max-w-5xl mx-auto flex items-center gap-4">
+
+    <a href="{% url 'all_shared_files' %}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors flex-shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        File Sharing
+    </a>
+
+    <span class="text-slate-300 select-none">|</span>
+
+    <div class="min-w-0">
+        <h1 class="text-xl font-semibold text-slate-800 leading-tight">Upload Links</h1>
+        <p class="text-xs text-slate-500">Let clients upload files to you</p>
+    </div>
+
+    <div class="flex-1"></div>
+
+    <a href="{% url 'create_upload_link' %}"
+       class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Create Upload Link
+    </a>
+
+</div>
+</div>
+
+
+{% if not links %}
+<div class="text-center py-16 text-slate-400">
+    <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+    </svg>
+    <div class="font-medium text-slate-500 mb-1">No upload links yet</div>
+    <div class="text-sm">Create a link to let clients securely upload files.</div>
+</div>
+{% else %}
+
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <table id="linktable" class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Title</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Created</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Expires</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Files</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for link in links %}
+            <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                <td class="px-4 py-3 font-medium text-slate-800">{{ link.title }}</td>
+                <td class="px-4 py-3 text-slate-500 tabular-nums hidden md:table-cell">{{ link.created_on|date:"Y-m-d" }}</td>
+                <td class="px-4 py-3 tabular-nums {% if link.is_expired %}text-red-500{% else %}text-slate-500{% endif %}">
+                    {{ link.expires_on|date:"Y-m-d" }}
+                </td>
+                <td class="px-4 py-3 text-slate-500 hidden md:table-cell">
+                    {{ link.uploaded_files.count }}<span class="text-slate-400">/{{ link.max_files }}</span>
+                </td>
+                <td class="px-4 py-3">
+                    {% if link.is_expired %}
+                    <span class="badge status-expired">Expired</span>
+                    {% elif not link.is_active %}
+                    <span class="badge status-inactive">Inactive</span>
+                    {% else %}
+                    <span class="badge status-active">Active</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    <a href="{% url 'view_upload_link' linkuuid=link.unid %}"
+                       class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+                        View
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endif %}
+
+{% endblock %}

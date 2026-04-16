@@ -1,0 +1,139 @@
+{% extends "_basenorm.html" %}
+{% load static %}
+
+{% block page_title %}Archived Tasks{% endblock %}
+
+{% block extra_css %}
+<style>
+html, body { overflow: auto; height: auto; }
+
+.priority-high     { background:#ffedd5; color:#c2410c; }
+.priority-medium   { background:#fef9c3; color:#92400e; }
+.priority-low      { background:#f0fdf4; color:#166534; }
+
+.badge { display:inline-flex; align-items:center; padding:1px 7px; border-radius:9999px;
+         font-size:.7rem; font-weight:600; white-space:nowrap; }
+
+.scope-personal { background:#f0fdf4; color:#166534; }
+.scope-shared   { background:#eff6ff; color:#1d4ed8; }
+
+.todo-row {
+    display:flex; align-items:center; gap:.75rem;
+    padding:.625rem .75rem; border-radius:8px;
+    transition:background .1s;
+}
+.todo-row:hover { background:#f8fafc; }
+
+.action-btn {
+    padding:3px 6px; border-radius:5px; border:none; background:transparent;
+    cursor:pointer; color:#cbd5e1; transition:color .15s, background .15s;
+    display:inline-flex; align-items:center;
+}
+.action-btn:hover            { background:#f1f5f9; color:#64748b; }
+.action-btn.restore-btn:hover { color:#059669; background:#f0fdf4; }
+.action-btn.delete-btn:hover  { color:#dc2626; background:#fef2f2; }
+
+.empty-state { text-align:center; padding:3rem 1rem; color:#94a3b8; }
+</style>
+{% endblock %}
+
+
+{% block body %}
+
+<!-- ── Sticky action bar ─────────────────────────────────────────── -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
+<div class="max-w-5xl mx-auto flex items-center gap-3">
+
+    <a href="{% url 'all_todos' %}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors flex-shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        To-Do
+    </a>
+
+    <span class="text-slate-300 select-none">|</span>
+
+    <div class="min-w-0">
+        <h1 class="text-xl font-semibold text-slate-800 leading-tight">Archived Tasks</h1>
+        {% if todos %}
+        <p class="text-xs text-slate-500">{{ todos|length }} archived task{{ todos|length|pluralize }}</p>
+        {% endif %}
+    </div>
+
+</div>
+</div>
+
+
+<!-- ── Archived list ─────────────────────────────────────────────── -->
+{% if not todos %}
+<div class="empty-state">
+    <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
+    </svg>
+    <div class="text-slate-500 font-medium mb-1">No archived tasks</div>
+    <div class="text-sm text-slate-400">Completed tasks are archived automatically after 14 days.</div>
+</div>
+{% else %}
+
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+{% for todo in todos %}
+<div class="todo-row {% if not forloop.last %}border-b border-slate-50{% endif %}">
+
+    <!-- Done indicator -->
+    <span class="w-4 h-4 rounded-full bg-green-100 border-2 border-green-400 flex-shrink-0 flex items-center justify-center">
+        <svg class="w-2.5 h-2.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+        </svg>
+    </span>
+
+    <!-- Title + meta -->
+    <div class="flex-1 min-w-0">
+        <div class="text-sm text-slate-500 line-through truncate">{{ todo.title }}</div>
+        <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span class="badge priority-{{ todo.priority }}">{{ todo.get_priority_display }}</span>
+            <span class="badge scope-{{ todo.scope }}">{{ todo.get_scope_display }}</span>
+            {% if todo.completed_on %}
+            <span class="text-xs text-slate-400">Completed {{ todo.completed_on|date:"M j, Y" }}</span>
+            {% endif %}
+            {% if todo.archived_on %}
+            <span class="text-xs text-slate-400">Archived {{ todo.archived_on|date:"M j, Y" }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-1 flex-shrink-0">
+        <!-- Restore -->
+        <form method="POST" action="{% url 'edit_todo' todo.id %}" class="m-0">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="unarchive">
+            <button type="submit" class="action-btn restore-btn" title="Restore">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+            </button>
+        </form>
+        <!-- Delete permanently -->
+        <form method="POST" action="{% url 'edit_todo' todo.id %}" class="m-0">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <button type="submit" class="action-btn delete-btn" title="Delete permanently"
+                    onclick="return confirm('Permanently delete this task?')">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endfor %}
+</div>
+
+{% endif %}
+
+{% endblock %}

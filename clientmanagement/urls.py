@@ -22,6 +22,8 @@ from clientmanagement import views as clientmanagement_views
 from clientmanagement import loginform as clientmanagement_loginform
 from clientmanagement import generatefileviews as generate_files
 from models import views as models_views
+from models import projectviews as project_views
+from models import sharedfileviews
 from models.email import mailbox
 
 
@@ -68,10 +70,31 @@ urlpatterns = [
 
     path('files/', models_views.allSharedFilesView, name='all_shared_files'),
     path('files/upload', models_views.uploadSharedFileView, name='upload_shared_file'),
+    path('files/links/', sharedfileviews.all_upload_links, name='all_upload_links'),
+    path('files/links/create', sharedfileviews.create_upload_link, name='create_upload_link'),
+    path('files/links/<uuid:linkuuid>', sharedfileviews.view_upload_link, name='view_upload_link'),
+    path('files/links/<uuid:linkuuid>/delete', sharedfileviews.delete_upload_link, name='delete_upload_link'),
+    path('files/links/<uuid:linkuuid>/edit', sharedfileviews.edit_upload_link, name='edit_upload_link'),
     path('files/<uuid:fileuuid>/download', models_views.downloadSharedFilePublic, name='download_shared_file'),
     path('files/<uuid:fileuuid>/edit', models_views.editSharedFileView, name='shared_file_edit'),
     path('files/<int:fileid>/delete', models_views.deleteSharedFileView, name='delete_shared_file'),
     path('files/<uuid:fileuuid>', models_views.viewSharedFileView, name='shared_file_view'),
+    path('upload/<uuid:linkuuid>', sharedfileviews.client_upload_page, name='client_upload_page'),
+
+    path('projects/', project_views.all_projects, name='all_projects'),
+    path('projects/reorder', project_views.reorder_projects, name='reorder_projects'),
+    path('projects/archived', project_views.archived_projects, name='archived_projects'),
+    path('projects/<int:project_id>/edit', project_views.edit_project, name='edit_project'),
+    path('projects/<int:project_id>/delete', project_views.delete_project, name='delete_project'),
+    path('projects/<int:project_id>/task/add', project_views.add_task, name='add_task'),
+    path('projects/task/<int:task_id>/edit', project_views.edit_task, name='edit_task'),
+    path('projects/task/<int:task_id>/delete', project_views.delete_task, name='delete_task'),
+
+    path('todo/', project_views.all_todos, name='all_todos'),
+    path('todo/add', project_views.add_todo, name='add_todo'),
+    path('todo/archived', project_views.archived_todos, name='archived_todos'),
+    path('todo/reorder', project_views.reorder_todos, name='reorder_todos'),
+    path('todo/<int:todo_id>/edit', project_views.edit_todo, name='edit_todo'),
 
     path('help/', clientmanagement_views.helpview, name='help'),
     path('statistics/', clientmanagement_views.statisticsview, name='statistics'),

@@ -9,6 +9,7 @@ import os, mimetypes
 
 from models import sharedfile
 from models.filedownloadlog import FileDownloadLog
+from models.uploadlink import UploadLink, ClientUploadedFile
 from clientmanagement import views as main_views
 
 
@@ -183,3 +184,129 @@ def EditSharedFile(request, fileuuid):
         'built': datetime.now().strftime("%H:%M:%S"),
     }
     return render(request, 'views/editfile.html', data, content_type='text/html')
+
+
+# ══════════════════════════════════════════════════════════════════
+# UPLOAD LINKS
+# ══════════════════════════════════════════════════════════════════
+
+@login_required(login_url='login')
+def all_upload_links(request):
+    links = UploadLink.objects.filter(created_by=request.user).order_by('-created_on')
+    return render(request, 'views/uploadlinks.html', {'links': links})
+
+
+@login_required(login_url='login')
+def create_upload_link(request):
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        description = request.POST.get('description', '').strip()
+        try:
+            expires_days = min(max(1, int(request.POST.get('expires_days', 7))), 90)
+        except (ValueError, TypeError):
+            expires_days = 7
+        try:
+            max_files = min(max(1, int(request.POST.get('max_files', 10))), 50)
+        except (ValueError, TypeError):
+            max_files = 10
+        if title:
+            link = UploadLink.objects.create(
+                title=title,
+                description=description,
+                expires_on=date.today() + timedelta(days=expires_days),
+                max_files=max_files,
+                created_by=request.user,
+            )
+            return redirect(reverse('view_upload_link', kwargs={'linkuuid': link.unid}))
+    return render(request, 'views/createuploadlink.html', {})
+
+
+@login_required(login_url='login')
+def view_upload_link(request, linkuuid):
+    link = get_object_or_404(UploadLink, unid=linkuuid)
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        if action == 'deactivate':
+            link.is_active = False
+            link.save()
+        elif action == 'activate':
+            link.is_active = True
+            link.save()
+        return redirect(reverse('view_upload_link', kwargs={'linkuuid': linkuuid}))
+    files = link.uploaded_files.order_by('-uploaded_at')
+    full_url = request.build_absolute_uri(
+        reverse('client_upload_page', kwargs={'linkuuid': linkuuid})
+    )
+    return render(request, 'views/viewuploadlink.html', {
+        'link': link,
+        'files': files,
+        'full_url': full_url,
+    })
+
+
+@login_required(login_url='login')
+def delete_upload_link(request, linkuuid):
+    link = get_object_or_404(UploadLink, unid=linkuuid)
+    if request.method == 'POST':
+        # Delete uploaded files from disk
+        for cf in link.uploaded_files.all():
+            try:
+                cf.uplfile.delete(save=False)
+            except Exception:
+                pass
+        link.delete()
+    return redirect('all_upload_links')
+
+
+@login_required(login_url='login')
+def edit_upload_link(request, linkuuid):
+    link = get_object_or_404(UploadLink, unid=linkuuid)
+    if request.method == 'POST':
+        title = request.POST.get('title', link.title).strip() or link.title
+        link.title = title
+        link.description = request.POST.get('description', '').strip()
+        expires_days_raw = request.POST.get('expires_days', '').strip()
+        if expires_days_raw:
+            try:
+                expires_days = min(max(1, int(expires_days_raw)), 90)
+                link.expires_on = date.today() + timedelta(days=expires_days)
+            except (ValueError, TypeError):
+                pass
+        try:
+            max_files = min(max(1, int(request.POST.get('max_files', link.max_files))), 50)
+            link.max_files = max_files
+        except (ValueError, TypeError):
+            pass
+        link.save()
+        return redirect(reverse('view_upload_link', kwargs={'linkuuid': linkuuid}))
+    return render(request, 'views/edituploadlink.html', {'link': link})
+
+
+def client_upload_page(request, linkuuid):
+    link = get_object_or_404(UploadLink, unid=linkuuid)
+    if not link.is_available():
+        return render(request, 'views/uploadlinkexpired.html', {'link': link})
+    error = None
+    success = False
+    if request.method == 'POST':
+        files = request.FILES.getlist('files')
+        if not files:
+            error = 'Please select at least one file.'
+        elif link.uploaded_files.count() + len(files) > link.max_files:
+            error = 'Too many files. Maximum %d files allowed for this link.' % link.max_files
+        else:
+            for ufile in files:
+                cf = ClientUploadedFile(
+                    upload_link=link,
+                    original_filename=ufile.name,
+                    ip_address=request.META.get('REMOTE_ADDR'),
+                    file_size=ufile.size,
+                )
+                cf.uplfile = ufile
+                cf.save()
+            success = True
+    return render(request, 'views/clientuploadpage.html', {
+        'link': link,
+        'error': error,
+        'success': success,
+    })
