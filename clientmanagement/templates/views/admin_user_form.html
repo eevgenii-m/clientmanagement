@@ -1,0 +1,118 @@
+{% extends "_basenarrow.html" %}
+{% load static %}
+
+{% block page_title %}{% if mode == 'add' %}Add User{% else %}Edit User{% endif %} — Admin Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+html, body { overflow: auto; height: auto; }
+.field-input {
+    display:block; width:100%; border:1px solid #e2e8f0; border-radius:8px;
+    padding:8px 12px; font-size:.9rem; color:#1e293b; background:#fff;
+    outline:none; font-family:'DM Sans',sans-serif; transition:border-color .15s,box-shadow .15s;
+    box-sizing:border-box;
+}
+.field-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+</style>
+{% endblock %}
+
+{% block body %}
+
+<!-- Sticky action bar -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
+<div class="max-w-5xl mx-auto flex items-center gap-3">
+    <a href="{% url 'admin_users' %}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mr-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Users
+    </a>
+    <span class="text-sm font-semibold text-slate-800">
+        {% if mode == 'add' %}Add User{% else %}Edit: {{ edit_user.get_full_name|default:edit_user.username }}{% endif %}
+    </span>
+    <div class="flex-1"></div>
+    <a href="{% url 'admin_users' %}"
+       class="inline-flex items-center px-3 py-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+        Cancel
+    </a>
+    <button form="user-form" type="submit"
+            class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        {% if mode == 'add' %}Create User{% else %}Save{% endif %}
+    </button>
+</div>
+</div>
+
+<div class="max-w-5xl mx-auto">
+
+{% if errors %}
+<div class="mb-5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
+    <ul class="list-disc list-inside text-sm text-red-700 space-y-0.5">
+        {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<form id="user-form" method="POST">
+{% csrf_token %}
+<div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+                First name <span class="text-red-500">*</span>
+            </label>
+            <input type="text" name="first_name" required maxlength="150"
+                   value="{{ form_data.first_name|default:edit_user.first_name|default:'' }}"
+                   class="field-input">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+                Last name <span class="text-red-500">*</span>
+            </label>
+            <input type="text" name="last_name" required maxlength="150"
+                   value="{{ form_data.last_name|default:edit_user.last_name|default:'' }}"
+                   class="field-input">
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+            Email address <span class="text-red-500">*</span>
+        </label>
+        <input type="email" name="email" required maxlength="254"
+               value="{{ form_data.email|default:edit_user.email|default:'' }}"
+               class="field-input">
+        <p class="mt-1 text-xs text-slate-400">Used as login credential. Must be unique.</p>
+    </div>
+
+    <div>
+        <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+            {% if mode == 'add' %}Password <span class="text-red-500">*</span>{% else %}New password <span class="text-slate-400 font-normal">(leave blank to keep current)</span>{% endif %}
+        </label>
+        <input type="password" name="password" autocomplete="new-password"
+               {% if mode == 'add' %}required{% endif %}
+               class="field-input">
+        <p class="mt-1 text-xs text-slate-400">Minimum 8 characters.</p>
+    </div>
+
+    {% if request.user.is_superuser %}
+    <div class="flex items-center gap-3 pt-1">
+        <input type="checkbox" name="is_staff" value="1" id="id_is_staff"
+               {% if form_data.is_staff == '1' %}checked{% elif not form_data and edit_user.is_staff %}checked{% endif %}
+               class="w-4 h-4 rounded border-slate-300 text-blue-600">
+        <label for="id_is_staff" class="text-sm text-slate-700 cursor-pointer">
+            Staff access — can log in to Admin Portal
+        </label>
+    </div>
+    {% endif %}
+
+</div>
+</form>
+
+</div>{# end max-w-5xl #}
+
+{% endblock %}

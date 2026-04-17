@@ -10,10 +10,10 @@ import collections, copy
 
 class PersonForm(forms.ModelForm):
     phone = PhoneNumberField(label="Phone number", required=False, help_text="You can add the extension after an x")
-    order=('firstname', 'lastname', 'email', 'phone', 'annoyance', 'employedby', 'description')
+    order=('firstname', 'lastname', 'email', 'phone', 'employedby', 'description')
     class Meta:
         model = person.Person
-        fields = ('firstname', 'lastname', 'email', 'annoyance', 'employedby', 'description')
+        fields = ('firstname', 'lastname', 'email', 'employedby', 'description')
 
     def __init__(self, *args, **kwargs):
         super(PersonForm, self).__init__(*args, **kwargs)
@@ -21,6 +21,8 @@ class PersonForm(forms.ModelForm):
         self.fields = collections.OrderedDict()
         for item in self.order:
             self.fields[item] = tmp[item]
+
+        self.fields['employedby'].required = False
 
         instance = getattr(self, 'instance', None)
         if instance and instance.id:
@@ -42,76 +44,90 @@ class PersonForm(forms.ModelForm):
 #         fields = ('firstname', 'lastname', 'email', 'phone', 'annoyance', 'employedby', 'description')
  
 
-def personFormParse(request, clientid):
-    data={}
+def personFormParse(request, clientid=None):
+    """Handle add/edit/delete for a person.
+
+    Works with or without a client context:
+      - clientid=None  -> standalone (People page), back to allpeople
+      - clientid=<id>  -> client-scoped, back to that client's detail page
+    """
+    data = {}
     data['PAGE_TITLE'] = 'Change Person: CMS infotek'
-    try:
-        b=client.Client.objects.get(id=clientid)
-    except Exception as exc:
-        return redirect(reverse('allclients'))
+
+    # Resolve client and back URL
+    if clientid is not None:
+        try:
+            b = client.Client.objects.get(id=clientid)
+        except Exception:
+            return redirect(reverse('allclients'))
+        back_url = reverse('oneclient', kwargs={'clientid': clientid})
+    else:
+        b = None
+        back_url = reverse('allpeople')
+
     if (request.method == 'POST') and ('action' in request.POST):
-        if (request.POST['action']=='add'):
+        if (request.POST['action'] == 'add'):
             form = PersonForm(request.POST)
             if form.is_valid():
                 model = form.save(commit=False)
                 model.save()
-                return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
+                return redirect(back_url)
             else:
-                data['action']='add'
+                data['action'] = 'add'
                 data['PAGE_TITLE'] = 'New Person: CMS infotek'
                 data['minititle'] = 'Add Person'
                 data['submbutton'] = 'Add person'
-        elif (request.POST['action']=='change'):
-            if('targetid' in request.POST):
+        elif (request.POST['action'] == 'change'):
+            if 'targetid' in request.POST:
                 try:
-                    curpers=person.Person.objects.get(id=request.POST['targetid'])
+                    curpers = person.Person.objects.get(id=request.POST['targetid'])
                 except Exception:
-                    return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
+                    return redirect(back_url)
                 form = PersonForm(instance=curpers)
                 data['action'] = 'changed'
                 data['targetid'] = request.POST['targetid']
-                data['minititle'] = 'Change Person "'+curpers.name()+'"'
+                data['minititle'] = 'Change Person "' + curpers.name() + '"'
                 data['submbutton'] = 'Change person'
-                data['deletebutton'] = 'Delete ' +curpers.name()
             else:
-                return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
-        elif (request.POST['action']=='changed'):
-            if('targetid' in request.POST):
+                return redirect(back_url)
+        elif (request.POST['action'] == 'changed'):
+            if 'targetid' in request.POST:
                 try:
-                    curpers=person.Person.objects.get(id=request.POST['targetid'])
+                    curpers = person.Person.objects.get(id=request.POST['targetid'])
                 except Exception:
-                    return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
+                    return redirect(back_url)
                 form = PersonForm(request.POST, instance=curpers)
                 if form.is_valid():
                     model = form.save(commit=False)
                     model.save()
-                    return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
+                    return redirect(back_url)
                 data['action'] = 'changed'
                 data['targetid'] = request.POST['targetid']
-                data['minititle'] = 'Change Person "'+curpers.name()+'"'
+                data['minititle'] = 'Change Person "' + curpers.name() + '"'
                 data['submbutton'] = 'Change person'
-                data['deletebutton'] = 'Delete ' +curpers.name()
             else:
-                return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
-        elif (request.POST['action']=='delete'):
-            if('targetid' in request.POST):
+                return redirect(back_url)
+        elif (request.POST['action'] == 'delete'):
+            if 'targetid' in request.POST:
                 try:
-                    curpers=person.Person.objects.get(id=request.POST['targetid'])
+                    curpers = person.Person.objects.get(id=request.POST['targetid'])
                 except Exception:
-                    return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
+                    return redirect(back_url)
                 curpers.delete()
-                return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
+                return redirect(back_url)
             else:
-                return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
+                return redirect(back_url)
         else:
-            return redirect(reverse('oneclient', kwargs={'clientid': clientid}))
+            return redirect(back_url)
     else:
-        form = PersonForm(initial={'employedby': b})
-        data['action']='add'
+        initial = {'employedby': b} if b else {}
+        form = PersonForm(initial=initial)
+        data['action'] = 'add'
         data['PAGE_TITLE'] = 'New Person: CMS infotek'
         data['minititle'] = 'Add Person'
         data['submbutton'] = 'Add person'
+
     data['form'] = form
-    data['built'] = datetime.now().strftime("%H:%M:%S") 
-    data['backurl'] = reverse('oneclient', kwargs={'clientid': clientid})
+    data['built'] = datetime.now().strftime("%H:%M:%S")
+    data['backurl'] = back_url
     return render(request, 'forms/unimodelform.html', data, content_type='text/html')

@@ -62,6 +62,73 @@ html, body { overflow: auto; height: auto; }
 
 {% block body %}
 
+<!-- Add Todo Modal -->
+<div id="add-todo-modal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+        <h3 class="text-base font-semibold text-slate-800 mb-4">Add Task</h3>
+        <form id="add-todo-form" method="POST" action="{% url 'add_todo' %}">
+            {% csrf_token %}
+            <input type="hidden" name="scope" id="add-todo-scope" value="personal">
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Title <span class="text-red-500">*</span></label>
+                <input type="text" name="title" id="add-todo-title" class="modal-input" required maxlength="200" placeholder="What needs to be done?">
+            </div>
+            <div class="mb-3">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Description</label>
+                <textarea name="description" id="add-todo-desc" class="modal-input" rows="2" style="resize:vertical" placeholder="Details, notes…"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Status</label>
+                    <select name="status" id="add-todo-status" class="modal-input">
+                        {% for val, label in todo_statuses %}
+                        <option value="{{ val }}"{% if val == 'todo' %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Priority</label>
+                    <select name="priority" id="add-todo-priority" class="modal-input">
+                        {% for val, label in priority_choices %}
+                        <option value="{{ val }}"{% if val == 'medium' %} selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Start date</label>
+                    <input type="date" name="start_date" id="add-todo-start" class="modal-input" min="{{ today|date:'Y-m-d' }}">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Due date</label>
+                    <input type="date" name="due_date" id="add-todo-due" class="modal-input" min="{{ today|date:'Y-m-d' }}">
+                </div>
+            </div>
+            <div id="add-todo-assign-row" class="mb-3" style="display:none">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Assign to</label>
+                <select name="assigned_to" id="add-todo-assigned" class="modal-input">
+                    <option value="">Unassigned</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex gap-2 justify-end mt-4">
+                <button type="button" onclick="closeAddTodoModal()"
+                        class="px-4 py-2 text-sm text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                    Add task
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
 <!-- Edit Todo Modal (outside panels, shared by both) -->
 <div id="edit-todo-modal" class="modal-overlay" style="display:none">
     <div class="modal-box">
@@ -94,9 +161,15 @@ html, body { overflow: auto; height: auto; }
                     </select>
                 </div>
             </div>
-            <div class="mb-3">
-                <label class="block text-xs font-medium text-slate-500 mb-1">Due date</label>
-                <input type="date" name="due_date" id="edit-todo-due" class="modal-input">
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Start date</label>
+                    <input type="date" name="start_date" id="edit-todo-start" class="modal-input" min="{{ today|date:'Y-m-d' }}">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Due date</label>
+                    <input type="date" name="due_date" id="edit-todo-due" class="modal-input" min="{{ today|date:'Y-m-d' }}">
+                </div>
             </div>
             <div id="edit-todo-assign-row" class="mb-3" style="display:none">
                 <label class="block text-xs font-medium text-slate-500 mb-1">Assign to</label>
@@ -151,6 +224,23 @@ html, body { overflow: auto; height: auto; }
         Archived
     </a>
 
+    <button onclick="window.location.reload()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Refresh
+    </button>
+
+    <button onclick="openAddTodoModal()"
+            class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add task
+    </button>
+
 </div>
 </div>
 
@@ -160,17 +250,17 @@ html, body { overflow: auto; height: auto; }
 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
     <table class="w-full table-fixed todo-table">
         <colgroup>
-            <col style="width:28px">
+            <col class="hidden md:table-column" style="width:28px">
             <col>
             <col style="width:120px">
-            <col style="width:100px">
-            <col style="width:130px">
-            <col style="width:90px">
+            <col class="hidden md:table-column" style="width:100px">
+            <col class="hidden md:table-column" style="width:85px">
+            <col class="hidden md:table-column" style="width:90px">
             <col style="width:60px">
         </colgroup>
         <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
-                <th class="px-3 py-2"></th>
+                <th class="px-3 py-2 hidden md:table-cell"></th>
                 <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
                     data-col="title" onclick="sortTodos('personal','title')">
                     Task <span class="sort-indicator text-blue-500"></span>
@@ -179,14 +269,14 @@ html, body { overflow: auto; height: auto; }
                     data-col="status" onclick="sortTodos('personal','status')">
                     Status <span class="sort-indicator text-blue-500"></span>
                 </th>
-                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 hidden md:table-cell"
                     data-col="priority" onclick="sortTodos('personal','priority')">
                     Priority <span class="sort-indicator text-blue-500"></span>
                 </th>
-                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                    Assigned
+                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 hidden md:table-cell">
+                    Start
                 </th>
-                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 hidden md:table-cell"
                     data-col="due" onclick="sortTodos('personal','due')">
                     Due <span class="sort-indicator text-blue-500"></span>
                 </th>
@@ -199,13 +289,14 @@ html, body { overflow: auto; height: auto; }
                 data-title="{{ todo.title|escapejs }}"
                 data-status="{{ todo.status }}"
                 data-priority="{{ todo.priority }}"
+                data-start="{{ todo.start_date|date:'Y-m-d'|default:'' }}"
                 data-due="{{ todo.due_date|date:'Y-m-d'|default:'' }}"
                 class="border-b border-slate-100">
-                <td class="px-3 py-2 text-center">
+                <td class="px-3 py-2 text-center hidden md:table-cell">
                     <span class="todo-drag-handle" title="Drag to reorder">⠿</span>
                 </td>
                 <td class="px-3 py-2">
-                    <div class="text-sm text-slate-800 {% if todo.status == 'done' %}todo-done-title{% endif %}"
+                    <div class="text-sm {% if todo.is_overdue %}text-red-600 font-medium{% elif todo.status == 'done' %}todo-done-title{% else %}text-slate-800{% endif %}"
                          style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;">
                         {{ todo.title }}
                     </div>
@@ -258,7 +349,7 @@ html, body { overflow: auto; height: auto; }
                         </div>
                     </div>
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2 hidden md:table-cell">
                     {% if todo.priority == 'high' %}
                     <span class="text-xs font-medium text-orange-600">↑ High</span>
                     {% elif todo.priority == 'medium' %}
@@ -267,10 +358,14 @@ html, body { overflow: auto; height: auto; }
                     <span class="text-xs text-slate-400">↓ Low</span>
                     {% endif %}
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2 hidden md:table-cell">
+                    {% if todo.start_date %}
+                    <span class="text-xs text-slate-500">{{ todo.start_date|date:"M j" }}</span>
+                    {% else %}
                     <span class="text-xs text-slate-300">—</span>
+                    {% endif %}
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2 hidden md:table-cell">
                     {% if todo.due_date %}
                     <span class="text-xs {% if todo.is_overdue %}text-red-600 font-medium{% else %}text-slate-500{% endif %}">
                         {% if todo.is_overdue %}⚠ {% endif %}{{ todo.due_date|date:"M j" }}
@@ -284,7 +379,7 @@ html, body { overflow: auto; height: auto; }
                         {% if todo.status == 'done' %}
                         <form method="POST" action="{% url 'edit_todo' todo.id %}" class="m-0">
                             {% csrf_token %}<input type="hidden" name="action" value="archive">
-                            <button type="submit" class="p-1 text-slate-300 hover:text-slate-500 transition-colors" title="Archive">
+                            <button type="submit" class="p-1.5 text-slate-300 hover:text-slate-500 hover:bg-slate-50 rounded transition-colors" title="Archive">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
                                 </svg>
@@ -292,8 +387,8 @@ html, body { overflow: auto; height: auto; }
                         </form>
                         {% endif %}
                         <button type="button"
-                                onclick="openEditTodo({{ todo.id }},'{{ todo.title|escapejs }}','{{ todo.description|escapejs }}','{{ todo.status }}','{{ todo.priority }}','{{ todo.due_date|date:'Y-m-d'|default:'' }}','personal','')"
-                                class="p-1 text-slate-300 hover:text-slate-600 transition-colors" title="Edit">
+                                onclick="openEditTodo({{ todo.id }},'{{ todo.title|escapejs }}','{{ todo.description|escapejs }}','{{ todo.status }}','{{ todo.priority }}','{{ todo.due_date|date:'Y-m-d'|default:'' }}','personal','','{{ todo.start_date|date:'Y-m-d'|default:'' }}')"
+                                class="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Edit">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
@@ -301,7 +396,7 @@ html, body { overflow: auto; height: auto; }
                         <form method="POST" action="{% url 'edit_todo' todo.id %}" class="m-0">
                             {% csrf_token %}<input type="hidden" name="action" value="delete">
                             <button type="submit" onclick="return confirm('Delete this task?')"
-                                    class="p-1 text-slate-300 hover:text-red-500 transition-colors" title="Delete">
+                                    class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -311,31 +406,10 @@ html, body { overflow: auto; height: auto; }
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-400">No tasks yet — add one below</td></tr>
+            <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-400">No tasks yet — click <strong>Add task</strong> above</td></tr>
         {% endfor %}
         </tbody>
     </table>
-    <!-- Add personal task -->
-    <div class="px-4 py-3 border-t border-slate-100">
-        <form method="POST" action="{% url 'add_todo' %}" class="flex items-center gap-2 flex-wrap">
-            {% csrf_token %}
-            <input type="hidden" name="scope" value="personal">
-            <input type="text" name="title" placeholder="Add a task…" required maxlength="200"
-                   class="flex-1 min-w-[160px] px-3 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors">
-            <select name="priority"
-                    class="px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 bg-white">
-                <option value="high">High</option>
-                <option value="medium" selected>Medium</option>
-                <option value="low">Low</option>
-            </select>
-            <input type="date" name="due_date"
-                   class="px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400">
-            <button type="submit"
-                    class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                Add
-            </button>
-        </form>
-    </div>
 </div>
 
     <!-- Done section — personal -->
@@ -354,18 +428,18 @@ html, body { overflow: auto; height: auto; }
         <div id="done-section-personal" class="bg-white rounded-xl border border-slate-200 overflow-hidden mt-1">
             <table class="w-full table-fixed">
                 <colgroup>
-                    <col style="width:28px">
+                    <col class="hidden md:table-column" style="width:28px">
                     <col>
                     <col style="width:120px">
-                    <col style="width:100px">
-                    <col style="width:130px">
-                    <col style="width:90px">
+                    <col class="hidden md:table-column" style="width:100px">
+                    <col class="hidden md:table-column" style="width:85px">
+                    <col class="hidden md:table-column" style="width:90px">
                     <col style="width:60px">
                 </colgroup>
                 <tbody>
                 {% for todo in personal_done %}
                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td class="px-3 py-2">
+                    <td class="px-3 py-2 hidden md:table-cell">
                         <form method="POST" action="{% url 'edit_todo' todo.id %}">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle">
@@ -389,13 +463,16 @@ html, body { overflow: auto; height: auto; }
                     <td class="px-3 py-2">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Done</span>
                     </td>
-                    <td class="px-3 py-2">
+                    <td class="px-3 py-2 hidden md:table-cell">
                         {% if todo.priority == 'high' %}<span class="text-xs font-medium text-orange-600">↑ High</span>
                         {% elif todo.priority == 'medium' %}<span class="text-xs font-medium text-amber-600">→ Medium</span>
                         {% else %}<span class="text-xs text-slate-400">↓ Low</span>{% endif %}
                     </td>
-                    <td class="px-3 py-2"><span class="text-xs text-slate-300">—</span></td>
-                    <td class="px-3 py-2">
+                    <td class="px-3 py-2 hidden md:table-cell">
+                        {% if todo.start_date %}<span class="text-xs text-slate-400">{{ todo.start_date|date:"M j" }}</span>
+                        {% else %}<span class="text-xs text-slate-300">—</span>{% endif %}
+                    </td>
+                    <td class="px-3 py-2 hidden md:table-cell">
                         {% if todo.due_date %}<span class="text-xs text-slate-400">{{ todo.due_date|date:"M j" }}</span>
                         {% else %}<span class="text-xs text-slate-300">—</span>{% endif %}
                     </td>
@@ -405,7 +482,7 @@ html, body { overflow: auto; height: auto; }
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="archive">
                                 <button type="submit" title="Archive now"
-                                        class="p-1 text-slate-300 hover:text-slate-500 transition-colors">
+                                        class="p-1.5 text-slate-300 hover:text-slate-500 hover:bg-slate-50 rounded transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
                                     </svg>
@@ -415,7 +492,7 @@ html, body { overflow: auto; height: auto; }
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="delete">
                                 <button type="submit" onclick="return confirm('Delete this task?')"
-                                        class="p-1 text-slate-300 hover:text-red-500 transition-colors">
+                                        class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                     </svg>
@@ -441,17 +518,18 @@ html, body { overflow: auto; height: auto; }
 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
     <table class="w-full table-fixed todo-table">
         <colgroup>
-            <col style="width:28px">
+            <col class="hidden md:table-column" style="width:28px">
             <col>
             <col style="width:120px">
-            <col style="width:100px">
-            <col style="width:130px">
-            <col style="width:90px">
+            <col class="hidden md:table-column" style="width:100px">
+            <col class="hidden md:table-column" style="width:85px">
+            <col class="hidden md:table-column" style="width:130px">
+            <col class="hidden md:table-column" style="width:90px">
             <col style="width:60px">
         </colgroup>
         <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
-                <th class="px-3 py-2"></th>
+                <th class="px-3 py-2 hidden md:table-cell"></th>
                 <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
                     data-col="title" onclick="sortTodos('shared','title')">
                     Task <span class="sort-indicator text-blue-500"></span>
@@ -460,15 +538,18 @@ html, body { overflow: auto; height: auto; }
                     data-col="status" onclick="sortTodos('shared','status')">
                     Status <span class="sort-indicator text-blue-500"></span>
                 </th>
-                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 hidden md:table-cell"
                     data-col="priority" onclick="sortTodos('shared','priority')">
                     Priority <span class="sort-indicator text-blue-500"></span>
                 </th>
-                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-800 select-none"
+                <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 hidden md:table-cell">
+                    Start
+                </th>
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-800 select-none hidden md:table-cell"
                     data-col="assigned" onclick="sortTodos('shared','assigned')">
                     Assigned <span class="sort-indicator text-blue-500"></span>
                 </th>
-                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                <th class="sort-header px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 hidden md:table-cell"
                     data-col="due" onclick="sortTodos('shared','due')">
                     Due <span class="sort-indicator text-blue-500"></span>
                 </th>
@@ -481,10 +562,11 @@ html, body { overflow: auto; height: auto; }
                 data-title="{{ todo.title|escapejs }}"
                 data-status="{{ todo.status }}"
                 data-priority="{{ todo.priority }}"
+                data-start="{{ todo.start_date|date:'Y-m-d'|default:'' }}"
                 data-due="{{ todo.due_date|date:'Y-m-d'|default:'' }}"
                 data-assigned="{{ todo.assigned_to.get_full_name|default:''|escapejs }}"
                 class="border-b border-slate-100">
-                <td class="px-3 py-2 text-center">
+                <td class="px-3 py-2 text-center hidden md:table-cell">
                     <span class="todo-drag-handle" title="Drag to reorder">⠿</span>
                 </td>
                 <td class="px-3 py-2">
@@ -498,7 +580,7 @@ html, body { overflow: auto; height: auto; }
                         </span>
                         {% endif %}
                     </div>
-                    <div class="text-sm text-slate-800 {% if todo.status == 'done' %}todo-done-title{% endif %}"
+                    <div class="text-sm {% if todo.is_overdue %}text-red-600 font-medium{% elif todo.status == 'done' %}todo-done-title{% else %}text-slate-800{% endif %}"
                          style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;">
                         {{ todo.title }}
                     </div>
@@ -542,7 +624,7 @@ html, body { overflow: auto; height: auto; }
                         </div>
                     </div>
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2 hidden md:table-cell">
                     {% if todo.priority == 'high' %}
                     <span class="text-xs font-medium text-orange-600">↑ High</span>
                     {% elif todo.priority == 'medium' %}
@@ -551,19 +633,24 @@ html, body { overflow: auto; height: auto; }
                     <span class="text-xs text-slate-400">↓ Low</span>
                     {% endif %}
                 </td>
-                <td class="px-3 py-2">
-                    {% if todo.assigned_to %}
-                    <div class="flex items-center gap-1.5">
-                        <span class="user-avatar" style="background:#e0e7ff;color:#4338ca;flex-shrink:0;">
-                            {{ todo.assigned_to.first_name|first|default:todo.assigned_to.username|first|upper }}
-                        </span>
-                        <span class="text-xs text-slate-600 truncate">{{ todo.assigned_to.get_full_name|default:todo.assigned_to.username }}</span>
-                    </div>
+                <td class="px-3 py-2 hidden md:table-cell">
+                    {% if todo.start_date %}
+                    <span class="text-xs text-slate-500">{{ todo.start_date|date:"M j" }}</span>
                     {% else %}
-                    <span class="text-xs text-slate-400">Unassigned</span>
+                    <span class="text-xs text-slate-300">—</span>
                     {% endif %}
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2 hidden md:table-cell">
+                    {% if todo.assigned_to %}
+                    <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-medium text-indigo-700"
+                         title="{{ todo.assigned_to.get_full_name|default:todo.assigned_to.username }}">
+                        {{ todo.assigned_to.first_name|first|upper }}{{ todo.assigned_to.last_name|first|upper }}
+                    </div>
+                    {% else %}
+                    <span class="text-xs text-slate-400">—</span>
+                    {% endif %}
+                </td>
+                <td class="px-3 py-2 hidden md:table-cell">
                     {% if todo.due_date %}
                     <span class="text-xs {% if todo.is_overdue %}text-red-600 font-medium{% else %}text-slate-500{% endif %}">
                         {% if todo.is_overdue %}⚠ {% endif %}{{ todo.due_date|date:"M j" }}
@@ -575,8 +662,8 @@ html, body { overflow: auto; height: auto; }
                 <td class="px-3 py-2">
                     <div class="flex items-center gap-0.5">
                         <button type="button"
-                                onclick="openEditTodo({{ todo.id }},'{{ todo.title|escapejs }}','{{ todo.description|escapejs }}','{{ todo.status }}','{{ todo.priority }}','{{ todo.due_date|date:'Y-m-d'|default:'' }}','shared','{{ todo.assigned_to_id|default:'' }}')"
-                                class="p-1 text-slate-300 hover:text-slate-600 transition-colors" title="Edit">
+                                onclick="openEditTodo({{ todo.id }},'{{ todo.title|escapejs }}','{{ todo.description|escapejs }}','{{ todo.status }}','{{ todo.priority }}','{{ todo.due_date|date:'Y-m-d'|default:'' }}','shared','{{ todo.assigned_to_id|default:'' }}','{{ todo.start_date|date:'Y-m-d'|default:'' }}')"
+                                class="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Edit">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
@@ -584,7 +671,7 @@ html, body { overflow: auto; height: auto; }
                         <form method="POST" action="{% url 'edit_todo' todo.id %}" class="m-0">
                             {% csrf_token %}<input type="hidden" name="action" value="delete">
                             <button type="submit" onclick="return confirm('Delete this shared task?')"
-                                    class="p-1 text-slate-300 hover:text-red-500 transition-colors" title="Delete">
+                                    class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -594,31 +681,10 @@ html, body { overflow: auto; height: auto; }
                 </td>
             </tr>
         {% empty %}
-            <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-slate-400">No shared tasks yet — add one below</td></tr>
+            <tr><td colspan="8" class="px-4 py-8 text-center text-sm text-slate-400">No shared tasks yet — click <strong>Add task</strong> above</td></tr>
         {% endfor %}
         </tbody>
     </table>
-    <!-- Add shared task -->
-    <div class="px-4 py-3 border-t border-slate-100">
-        <form method="POST" action="{% url 'add_todo' %}" class="flex items-center gap-2 flex-wrap">
-            {% csrf_token %}
-            <input type="hidden" name="scope" value="shared">
-            <input type="text" name="title" placeholder="Add shared task…" required maxlength="200"
-                   class="flex-1 min-w-[160px] px-3 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors">
-            <select name="priority"
-                    class="px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 bg-white">
-                <option value="high">High</option>
-                <option value="medium" selected>Medium</option>
-                <option value="low">Low</option>
-            </select>
-            <input type="date" name="due_date"
-                   class="px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400">
-            <button type="submit"
-                    class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                Add
-            </button>
-        </form>
-    </div>
 </div>
 
     <!-- Done section — shared -->
@@ -637,18 +703,19 @@ html, body { overflow: auto; height: auto; }
         <div id="done-section-shared" class="bg-white rounded-xl border border-slate-200 overflow-hidden mt-1">
             <table class="w-full table-fixed">
                 <colgroup>
-                    <col style="width:28px">
+                    <col class="hidden md:table-column" style="width:28px">
                     <col>
                     <col style="width:120px">
-                    <col style="width:100px">
-                    <col style="width:130px">
-                    <col style="width:90px">
+                    <col class="hidden md:table-column" style="width:100px">
+                    <col class="hidden md:table-column" style="width:85px">
+                    <col class="hidden md:table-column" style="width:130px">
+                    <col class="hidden md:table-column" style="width:90px">
                     <col style="width:60px">
                 </colgroup>
                 <tbody>
                 {% for todo in shared_done %}
                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td class="px-3 py-2">
+                    <td class="px-3 py-2 hidden md:table-cell">
                         <form method="POST" action="{% url 'edit_todo' todo.id %}">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle">
@@ -682,24 +749,26 @@ html, body { overflow: auto; height: auto; }
                     <td class="px-3 py-2">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Done</span>
                     </td>
-                    <td class="px-3 py-2">
+                    <td class="px-3 py-2 hidden md:table-cell">
                         {% if todo.priority == 'high' %}<span class="text-xs font-medium text-orange-600">↑ High</span>
                         {% elif todo.priority == 'medium' %}<span class="text-xs font-medium text-amber-600">→ Medium</span>
                         {% else %}<span class="text-xs text-slate-400">↓ Low</span>{% endif %}
                     </td>
-                    <td class="px-3 py-2">
+                    <td class="px-3 py-2 hidden md:table-cell">
+                        {% if todo.start_date %}<span class="text-xs text-slate-400">{{ todo.start_date|date:"M j" }}</span>
+                        {% else %}<span class="text-xs text-slate-300">—</span>{% endif %}
+                    </td>
+                    <td class="px-3 py-2 hidden md:table-cell">
                         {% if todo.assigned_to %}
-                        <div class="flex items-center gap-1.5">
-                            <span class="user-avatar" style="background:#e0e7ff;color:#4338ca;flex-shrink:0;">
-                                {{ todo.assigned_to.first_name|first|default:todo.assigned_to.username|first|upper }}
-                            </span>
-                            <span class="text-xs text-slate-500 truncate">{{ todo.assigned_to.get_full_name|default:todo.assigned_to.username }}</span>
+                        <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-medium text-indigo-700"
+                             title="{{ todo.assigned_to.get_full_name|default:todo.assigned_to.username }}">
+                            {{ todo.assigned_to.first_name|first|upper }}{{ todo.assigned_to.last_name|first|upper }}
                         </div>
                         {% else %}
-                        <span class="text-xs text-slate-400">Unassigned</span>
+                        <span class="text-xs text-slate-400">—</span>
                         {% endif %}
                     </td>
-                    <td class="px-3 py-2">
+                    <td class="px-3 py-2 hidden md:table-cell">
                         {% if todo.due_date %}<span class="text-xs text-slate-400">{{ todo.due_date|date:"M j" }}</span>
                         {% else %}<span class="text-xs text-slate-300">—</span>{% endif %}
                     </td>
@@ -709,7 +778,7 @@ html, body { overflow: auto; height: auto; }
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="archive">
                                 <button type="submit" title="Archive now"
-                                        class="p-1 text-slate-300 hover:text-slate-500 transition-colors">
+                                        class="p-1.5 text-slate-300 hover:text-slate-500 hover:bg-slate-50 rounded transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
                                     </svg>
@@ -719,7 +788,7 @@ html, body { overflow: auto; height: auto; }
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="delete">
                                 <button type="submit" onclick="return confirm('Delete this task?')"
-                                        class="p-1 text-slate-300 hover:text-red-500 transition-colors">
+                                        class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                     </svg>
@@ -730,7 +799,7 @@ html, body { overflow: auto; height: auto; }
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="px-4 py-6 text-center text-sm text-slate-400">No completed tasks</td>
+                    <td colspan="8" class="px-4 py-6 text-center text-sm text-slate-400">No completed tasks</td>
                 </tr>
                 {% endfor %}
                 </tbody>
@@ -752,8 +821,12 @@ function getCookie(name) {
     return m ? decodeURIComponent(m[2]) : '';
 }
 
+// ── Current tab tracking ──────────────────────────────────────────────────────
+var currentTab = 'personal';
+
 // ── Tab switching ────────────────────────────────────────────────────────────
 function showTab(tab) {
+    currentTab = tab;
     document.getElementById('panel-personal').style.display = tab === 'personal' ? 'block' : 'none';
     document.getElementById('panel-shared').style.display   = tab === 'shared'   ? 'block' : 'none';
     var activeClass   = 'tab-active px-3 py-1.5 text-sm rounded-md font-medium transition-colors';
@@ -763,13 +836,34 @@ function showTab(tab) {
     try { localStorage.setItem('todo_tab_{{ request.user.id }}', tab); } catch(e) {}
 }
 
+// ── Add task modal ────────────────────────────────────────────────────────────
+function openAddTodoModal() {
+    document.getElementById('add-todo-scope').value = currentTab;
+    var assignRow = document.getElementById('add-todo-assign-row');
+    assignRow.style.display = currentTab === 'shared' ? '' : 'none';
+    document.getElementById('add-todo-title').value    = '';
+    document.getElementById('add-todo-desc').value     = '';
+    document.getElementById('add-todo-status').value   = 'todo';
+    document.getElementById('add-todo-priority').value = 'medium';
+    document.getElementById('add-todo-start').value    = '';
+    document.getElementById('add-todo-due').value      = '';
+    var assigned = document.getElementById('add-todo-assigned');
+    if (assigned) assigned.value = '';
+    document.getElementById('add-todo-modal').style.display = 'flex';
+    setTimeout(function() { document.getElementById('add-todo-title').focus(); }, 50);
+}
+function closeAddTodoModal() {
+    document.getElementById('add-todo-modal').style.display = 'none';
+}
+
 // ── Edit modal ───────────────────────────────────────────────────────────────
-function openEditTodo(id, title, desc, status, priority, due, scope, assignedId) {
+function openEditTodo(id, title, desc, status, priority, due, scope, assignedId, startDate) {
     document.getElementById('edit-todo-form').action = '/todo/' + id + '/edit';
     document.getElementById('edit-todo-title').value    = title;
     document.getElementById('edit-todo-desc').value     = desc;
     document.getElementById('edit-todo-status').value   = status;
     document.getElementById('edit-todo-priority').value = priority;
+    document.getElementById('edit-todo-start').value    = startDate || '';
     document.getElementById('edit-todo-due').value      = due;
     var assignRow = document.getElementById('edit-todo-assign-row');
     if (scope === 'shared') {
@@ -796,6 +890,15 @@ function toggleDoneSection(panel) {
 }
 document.getElementById('edit-todo-modal').addEventListener('click', function(e) {
     if (e.target === this) closeEditModal();
+});
+document.getElementById('add-todo-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeAddTodoModal();
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditModal();
+        closeAddTodoModal();
+    }
 });
 
 // ── Column sort ──────────────────────────────────────────────────────────────

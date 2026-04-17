@@ -230,7 +230,12 @@ Works from both the client detail view (`clid` passed) and the all-people list (
 
 ## Navigation
 
-Sidebar sections: **Main** → Home, Clients, People | **Tools** → Wiki, Tools, Secret Notes, File Sharing | **Work** → Projects, My To-Do | **System** → Help, Users (staff only)
+Sidebar sections: **Main** → Home, Clients, People | **Tools** → Wiki, Tools, Secret Notes, File Sharing | **Work** → Projects, My To-Do | **System** → Help, Admin Portal (staff only)
+
+### Admin Portal nav active states
+```html
+{% if request.resolver_match.url_name in 'usermanagement admin_users admin_user_add admin_user_edit admin_login_logs' %}nav-item-active{% endif %}
+```
 
 Active state via `request.resolver_match.url_name` in templates:
 ```html
@@ -553,3 +558,8 @@ Use this pattern for any status/priority dropdown inside a table row. The `x-ini
 | `views/archivedprojects.html` | Archived projects: ← Back, Restore (unarchive) + Delete, read-only tasks |
 | `views/todos.html` | To-Do List: Personal + Shared tabs, flat table per panel, `position:fixed` status dropdown, centralized edit modal, SortableJS drag-drop, assignee avatars, auto-archive |
 | `views/archivedtodos.html` | Archived tasks: ← To-Do, Restore + Delete, scope/priority badges, completed/archived dates |
+| `views/admin_portal.html` | Admin dashboard: stats cards, quick-action cards, recent login activity table |
+| `views/admin_users.html` | User management: table of all users, add/edit/delete, role badges, JS delete via fetch |
+| `views/admin_user_form.html` | Add / edit user form: first/last name, email (= username), password, is_staff toggle (superuser only) |
+| `views/admin_login_logs.html` | Login log viewer: timestamp, user/email, IP, success/fail badge; last 300 records |
+| `views/admin_403.html` | Access denied page for non-staff users attempting to reach admin URLs |

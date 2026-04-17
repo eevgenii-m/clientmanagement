@@ -401,11 +401,29 @@ def add_todo(request):
     if scope not in ('personal', 'shared'):
         scope = 'personal'
     if title:
+        status = request.POST.get('status', 'todo')
+        if status not in ('todo', 'inprogress', 'done'):
+            status = 'todo'
+        priority = request.POST.get('priority', 'medium')
+        if priority not in ('high', 'medium', 'low'):
+            priority = 'medium'
+        assigned_to = None
+        if scope == 'shared':
+            assigned_id = request.POST.get('assigned_to', '')
+            if assigned_id:
+                try:
+                    assigned_to = User.objects.get(id=int(assigned_id))
+                except (User.DoesNotExist, ValueError, TypeError):
+                    assigned_to = None
         Todo.objects.create(
             user=request.user,
             title=title,
+            description=(request.POST.get('description') or '').strip(),
             scope=scope,
-            priority=request.POST.get('priority', 'medium'),
+            status=status,
+            priority=priority,
+            assigned_to=assigned_to,
+            start_date=_parse_date(request.POST.get('start_date', '')),
             due_date=_parse_date(request.POST.get('due_date', '')),
             order=Todo.objects.filter(user=request.user, scope=scope).count(),
         )
@@ -467,6 +485,7 @@ def edit_todo(request, todo_id):
                 todo.completed_on = None
         if priority in valid_priorities:
             todo.priority = priority
+        todo.start_date = _parse_date(request.POST.get('start_date', ''))
         todo.due_date = _parse_date(request.POST.get('due_date', ''))
         if todo.scope == 'shared':
             assigned_id = request.POST.get('assigned_to', '').strip()

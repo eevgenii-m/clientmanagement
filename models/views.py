@@ -37,7 +37,7 @@ def clientForm(request):
 
 
 @login_required( login_url = 'login' )
-def personForm(request, clientid):    
+def personForm(request, clientid=None):
     valid, response = main_views.initRequest(request)
     if not valid:
         return response

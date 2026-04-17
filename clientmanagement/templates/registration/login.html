@@ -86,16 +86,16 @@
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ next }}" />
 
-                <!-- Username -->
+                <!-- Email -->
                 <div class="mb-5">
                     <label for="id_username" class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
-                        Username
+                        Email
                     </label>
-                    <input type="text"
+                    <input type="email"
                            id="id_username"
                            name="username"
                            value="{{ form.username.value|default:'' }}"
-                           autocomplete="username"
+                           autocomplete="email"
                            autofocus
                            class="field-input {% if form.username.errors %}has-error{% endif %}">
                     {% if form.username.errors %}

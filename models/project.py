@@ -159,6 +159,7 @@ class Todo(models.Model):
     scope = models.CharField(max_length=20, choices=SCOPE_CHOICES, default='personal')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='todo')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    start_date = models.DateField(null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     order = models.IntegerField(default=0)
     created_on = models.DateTimeField(auto_now_add=True)

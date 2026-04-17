@@ -9,11 +9,31 @@ Files live on a network share: `\\192.168.10.35\website\clientmanagement\`.
 
 ---
 
-## Critical constraints
+## Critical rules — read first
+- Always read CLAUDE.md and DESIGN.md completely before making any changes
+- Always update CLAUDE.md and DESIGN.md to reflect completed changes
+- Always check if Help page needs updating when adding new features
+- All file edits are pre-approved — proceed without asking for confirmation
+- Do not use git worktrees or pull requests — edit files directly on the network path
+- Make .bak copies before editing any existing file
 
-### No dev server
-The app runs on Apache. There is no `runserver` — never start one.
-Test by visiting `https://192.168.10.35` directly in the browser.
+## Servers
+- Dev server: `\\192.168.10.35\website\clientmanagement` → https://192.168.10.35
+- Production: `\\192.168.10.34\website\clientmanagement` → https://cms.isstek.com
+- All development work happens on dev server (.35)
+- Production gets updates via: git pull + migrate + Apache restart
+
+## No dev server
+The app runs on Apache. Never start `runserver`.
+Cannot test in browser directly — human tests and reports back.
+
+## After Python file changes always tell human to run:
+```cmd
+python manage.py migrate
+net stop Apache2.4
+net start Apache2.4
+```
+Template (.html) changes are immediate — no restart needed.
 
 ### mod_wsgi bytecode caching
 **Python file changes require an Apache restart to take effect.**
@@ -177,9 +197,15 @@ Replace any remaining Foundation patterns:
 - Files stored at `client_uploads/<uuid_hex>/<filename>`
 - File in `models/uploadlink.py`
 
+### LoginLog
+- Fields: `user` (FK User nullable, `related_name='login_logs'`), `username_attempted`, `ip_address`, `timestamp`, `success` (bool), `user_agent`
+- Auto-created via Django auth signals (`user_logged_in`, `user_login_failed`) connected in `models/apps.py` `ready()`
+- Signal handlers in `models/loginlog.py`: `log_successful_login` and `log_failed_login`
+- File in `models/loginlog.py`; `app_label = 'models'`
+
 ### Annoyance field
 Exists on the Person model but is **not used anywhere in the UI**.
-Excluded from form rendering via: `{% if field.html_name != 'annoyance' %}` in `unimodelform.html`.
+**Excluded from `PersonForm.Meta.fields`** — it is NOT in the ModelForm at all. Django uses the model's `default='0'` automatically when saving. The template filter `{% if field.html_name != 'annoyance' %}` in `unimodelform.html` is now redundant but harmless.
 Do not display it in any view.
 
 ---
@@ -428,3 +454,29 @@ Custom toolbar button triggers `<input type="file" accept=".md,.txt,.markdown">`
 - [x] `views/edituploadlink.html` — edit form for upload links: extends `_basenarrow.html`, pre-filled title/instructions/max_files, optional expiry extension with current expiry hint
 - [x] `edit_upload_link` view in `models/sharedfileviews.py`; URL `files/links/<uuid>/edit` → name `edit_upload_link`; Edit button added to `viewuploadlink.html` sticky header and `uploadlinks.html` actions column
 - [x] Migration chain: `0058_project_task` → `0059_project_status_priority_due` → `0060_todo` → `0061_todo_scope_archive` → `0062_uploadlink_clientuploadedfile` → `0063_todo_assigned_to`
+- [x] **Bug fixes (Session 2)**:
+  - `models/personform.py`: Removed `'annoyance'` from `PersonForm.Meta.fields` and `order` tuple — was causing silent form validation failure (field required but never rendered, so POST data had no value). Django now uses model default (`0`) automatically.
+  - `models/uploadlink.py`: Fixed `upload_to_client()` — `instance.unid` → `instance.upload_link.unid` (`ClientUploadedFile` doesn't have `unid`; it's on the FK `UploadLink`). Also added `file_size_display` property to `ClientUploadedFile`.
+  - `clientmanagement/settings/local.py`: Added SSL context patch after email settings load — bypasses hostname verification for `smtp.emailsrvr.com` (SMTP server certificate has hostname mismatch). Patches `ssl.create_default_context` to return an unverified context.
+  - `views/alltools.html`: "Add Link" button changed to dark green (`bg-emerald-700 hover:bg-emerald-800`).
+  - `views/allfiles.html`: "Upload Links" button changed from orange to dark green (`bg-emerald-700 hover:bg-emerald-800`).
+  - `views/todos.html`: Overdue task titles show `text-red-600 font-medium`; Assigned column removed from Personal panel (both active and done tables, colgroup updated, colspan 8→7); Esc key closes both edit-todo and add-todo modals.
+  - `views/allprojects.html`: Overdue task titles show `text-red-600` (already had Esc key support via `.modal-backdrop` keydown listener).
+  - `registration/password_change_form.html` and `password_change_done.html`: Fully restyled to match login page (standalone HTML, Tailwind CDN, DM Sans font, card layout, field-input class, branded header).
+- [x] **Annoyance field note**: `PersonForm.Meta.fields` no longer includes `'annoyance'`. The field still exists on the Person model but is excluded from all form processing. Django uses the model's `default='0'` when saving.
+- [x] **Todo personal tab**: Assigned column is completely hidden (removed from colgroup, thead, active tbody, done tbody). Shared tab Assigned column is unchanged.
+- [x] **Session 3 — Mobile fixes**:
+  - `views/todos.html`: Mobile 3-column view — on `< md` breakpoint shows only Task, Status, Edit button; Drag handle, Priority, Start (was already hidden), Due all hidden with `hidden md:table-cell` / `hidden md:table-column` in all 4 tables (personal active, personal done, shared active, shared done)
+  - `views/todos.html`: Shared panel Assigned column — initials-only avatar (`title` attr for full name tooltip), removed full name `<span>` text; applies to both active and done rows
+  - `views/allprojects.html`: Created by and Assigned columns — initials-only avatars (`title` attr for full name tooltip), removed full name `<span>` text beside them
+  - `views/uploadlinks.html`: "Create Upload Link" button text hidden on mobile (`hidden sm:inline`), icon always visible
+  - `views/edituploadlink.html`: "Back to link" nav link — text wraps to "Back" on mobile (`<span class="hidden sm:inline"> to link</span>`)
+- [x] **Session 3 — Admin portal** (`models/adminviews.py`, `models/loginlog.py`, `clientmanagement/emailbackend.py`):
+  - **Email-based login**: `clientmanagement/emailbackend.py` — `EmailOrUsernameBackend` tries username first then case-insensitive email lookup; added to `AUTHENTICATION_BACKENDS` in `settings/base.py` before the default backend; login.html and loginform.py updated to show "Email" label and `type="email"` input
+  - **Login logs**: `models/loginlog.py` — `LoginLog` model (user FK nullable, username_attempted, ip_address, timestamp, success, user_agent); signal handlers `log_successful_login` and `log_failed_login` connected to Django auth signals in `models/apps.py` `ready()` method; migration `0065_loginlog.py`
+  - **Admin portal views**: `models/adminviews.py` — `admin_portal` (dashboard with stats + recent logs), `admin_users` (user list), `admin_user_add`, `admin_user_edit`, `admin_user_delete` (JSON), `admin_login_logs`; all gated by `@staff_required` decorator; superusers can toggle `is_staff` on other users; staff cannot edit superusers
+  - **URLs**: `usermanagement/` → `admin_portal` (kept name `usermanagement`); `/usermanagement/users/`, `/users/add`, `/users/<id>/edit`, `/users/<id>/delete`, `/login-logs/` added
+  - **Templates**: `views/admin_portal.html` (dashboard), `views/admin_users.html` (user table, JS delete), `views/admin_user_form.html` (add/edit form), `views/admin_login_logs.html` (log table), `views/admin_403.html` (access denied)
+  - **Sidebar**: `_base.html` — nav link changed from "Users" to "Admin Portal" with settings gear icon; active state check updated to include all admin URL names; still `{% if user.is_staff %}` gated
+  - **Migration chain**: `0064_todo_start_date` → `0065_loginlog`
+  - **User accounts**: email is now used as both `email` and `username` when creating/editing users via admin portal (email truncated to 150 chars for username field)

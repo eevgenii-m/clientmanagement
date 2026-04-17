@@ -8,7 +8,7 @@ def calc_expiry_upload():
     return datetime.today().date() + timedelta(days=7)
 
 def upload_to_client(instance, filename):
-    return os.path.join('client_uploads', instance.unid.hex, filename)
+    return os.path.join('client_uploads', instance.upload_link.unid.hex, filename)
 
 class UploadLink(models.Model):
     unid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
@@ -39,6 +39,18 @@ class ClientUploadedFile(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     file_size = models.BigIntegerField(default=0)
+
+    @property
+    def file_size_display(self):
+        size = self.file_size or 0
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        elif size < 1024 * 1024 * 1024:
+            return f"{size / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size / (1024 * 1024 * 1024):.1f} GB"
 
     def __str__(self):
         return self.original_filename

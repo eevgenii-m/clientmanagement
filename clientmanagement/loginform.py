@@ -12,7 +12,12 @@ class MyAuthLoginForm(auth_forms.AuthenticationForm):
         super(MyAuthLoginForm, self).__init__(*args, **kwargs)
         if (settings.CANCEL_CAPTCHA):
             self.fields.pop('rcaptcha')
-        #print(reverse('auth:reset_password_ready', kwargs={'resetgui': '56aab17d6091def21f2058e'}))
+        # Relabel username field to "Email"
+        self.fields['username'].label = 'Email'
+        self.fields['username'].widget.attrs.update({
+            'autocomplete': 'email',
+            'type': 'email',
+        })
 
 
 class my_reset_password_form(auth_forms.PasswordResetForm):

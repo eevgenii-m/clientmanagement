@@ -213,7 +213,7 @@ th.sortable:hover { color:#1e293b; }
         <div class="flex items-center gap-1 flex-shrink-0">
 
             <button onclick="openAddTaskModal({{ project.id }}, '{{ project.title|escapejs }}')"
-                    class="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors">
+                    class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -226,7 +226,7 @@ th.sortable:hover { color:#1e293b; }
                 <input type="hidden" name="action" value="archive">
                 <button type="submit"
                         onclick="return confirm('Archive \'{{ project.title|escapejs }}\'?')"
-                        class="inline-flex items-center gap-1 px-2 py-1 text-xs text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+                        class="inline-flex items-center gap-1 px-2 py-1 text-xs text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
                     <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
@@ -243,7 +243,7 @@ th.sortable:hover { color:#1e293b; }
                         '{{ project.status }}',
                         '{{ project.priority }}',
                         '{{ project.due_date|date:"Y-m-d"|default:"" }}')"
-                    class="inline-flex items-center gap-1 px-2 py-1 text-xs text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+                    class="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-600 bg-white border border-blue-200 rounded-md hover:bg-blue-50 transition-colors">
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
@@ -256,13 +256,13 @@ th.sortable:hover { color:#1e293b; }
                 {% csrf_token %}
                 <button type="submit"
                         onclick="return confirm('Delete \'{{ project.title|escapejs }}\' and all its tasks?\nThis cannot be undone.')"
-                        class="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors">
+                        class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                        title="Delete project">
                     <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858
                                  L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
-                    <span class="hidden sm:inline">Delete</span>
                 </button>
             </form>
         </div>
@@ -333,7 +333,7 @@ th.sortable:hover { color:#1e293b; }
             </td>
             <!-- CHANGE 5: line-clamp-2 on task title cell -->
             <td class="px-3 py-2">
-                <div class="text-sm font-medium text-slate-800 line-clamp-2 cursor-pointer hover:text-blue-600"
+                <div class="text-sm font-medium line-clamp-2 cursor-pointer hover:text-blue-600 {% if task.is_overdue %}text-red-600{% else %}text-slate-800{% endif %}"
                      onclick="openEditTaskModal({{ task.id }}, {{ project.id }})">{{ task.title }}</div>
                 {% if task.description %}
                 <div class="text-xs text-slate-400 truncate mt-0.5">{{ task.description|truncatechars:60 }}</div>
@@ -357,27 +357,28 @@ th.sortable:hover { color:#1e293b; }
             </td>
             <td class="px-3 py-2 hidden md:table-cell">
                 {% if task.created_by %}
-                <div class="flex items-center gap-1.5">
-                    <div class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600 flex-shrink-0">
-                        {{ task.created_by.first_name|first|upper }}{{ task.created_by.last_name|first|upper }}
-                    </div>
-                    <span class="text-xs text-slate-500 hidden lg:inline">
-                        {{ task.created_by.get_full_name|default:task.created_by.username }}
-                    </span>
+                <div class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600"
+                     title="{{ task.created_by.get_full_name|default:task.created_by.username }}">
+                    {{ task.created_by.first_name|first|upper }}{{ task.created_by.last_name|first|upper }}
                 </div>
                 {% else %}
                 <span class="text-xs text-slate-300">—</span>
                 {% endif %}
             </td>
-            <td class="px-3 py-2 hidden lg:table-cell text-xs text-slate-500 truncate">
-                {% if task.assigned_to %}{% firstof task.assigned_to.get_full_name task.assigned_to.username %}{% else %}&mdash;{% endif %}
+            <td class="px-3 py-2 hidden lg:table-cell">
+                {% if task.assigned_to %}
+                <div class="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium text-blue-700"
+                     title="{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}">
+                    {{ task.assigned_to.first_name|first|upper }}{{ task.assigned_to.last_name|first|upper }}
+                </div>
+                {% else %}<span class="text-xs text-slate-300">&mdash;</span>{% endif %}
             </td>
             <td class="px-3 py-2 hidden lg:table-cell text-xs {% if task.is_overdue %}due-overdue{% elif task.is_due_soon %}due-soon{% else %}text-slate-500{% endif %}">
                 {% if task.due_date %}{{ task.due_date|date:"M j" }}{% else %}&mdash;{% endif %}
             </td>
             <td class="px-1 py-2 text-right whitespace-nowrap">
                 <button onclick="openEditTaskModal({{ task.id }}, {{ project.id }})"
-                        class="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded" title="Edit">
+                        class="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Edit">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
@@ -385,7 +386,7 @@ th.sortable:hover { color:#1e293b; }
                     </svg>
                 </button>
                 <button onclick="deleteTask({{ task.id }}, {{ project.id }}, '{{ task.title|escapejs }}')"
-                        class="text-slate-400 hover:text-red-500 transition-colors p-1 rounded" title="Delete">
+                        class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -453,7 +454,7 @@ th.sortable:hover { color:#1e293b; }
         </div>
         <div>
           <label class="mf-label" for="np-due">Due date <span class="text-slate-400 font-normal">(optional)</span></label>
-          <input type="date" id="np-due" class="mf-input">
+          <input type="date" id="np-due" class="mf-input" min="{{ today|date:'Y-m-d' }}">
         </div>
       </div>
       <div class="mf-row">
@@ -517,7 +518,7 @@ th.sortable:hover { color:#1e293b; }
         </div>
         <div>
           <label class="mf-label" for="ep-due">Due date <span class="text-slate-400 font-normal">(optional)</span></label>
-          <input type="date" id="ep-due" class="mf-input">
+          <input type="date" id="ep-due" class="mf-input" min="{{ today|date:'Y-m-d' }}">
         </div>
       </div>
       <div class="mf-row">
@@ -591,12 +592,12 @@ th.sortable:hover { color:#1e293b; }
       <div class="mf-2col mf-row">
         <div>
           <label class="mf-label" for="at-start">Start date <span class="text-slate-400 font-normal">(optional)</span></label>
-          <input type="date" id="at-start" class="mf-input">
+          <input type="date" id="at-start" class="mf-input" min="{{ today|date:'Y-m-d' }}">
           <span class="mf-hint">Leave blank to set later</span>
         </div>
         <div>
           <label class="mf-label" for="at-due">Due date <span class="text-slate-400 font-normal">(optional)</span></label>
-          <input type="date" id="at-due" class="mf-input">
+          <input type="date" id="at-due" class="mf-input" min="{{ today|date:'Y-m-d' }}">
           <span class="mf-hint">Leave blank to set later</span>
         </div>
       </div>
@@ -660,12 +661,12 @@ th.sortable:hover { color:#1e293b; }
       <div class="mf-2col mf-row">
         <div>
           <label class="mf-label" for="et-start">Start date <span class="text-slate-400 font-normal">(optional)</span></label>
-          <input type="date" id="et-start" class="mf-input">
+          <input type="date" id="et-start" class="mf-input" min="{{ today|date:'Y-m-d' }}">
           <span class="mf-hint">Leave blank to set later</span>
         </div>
         <div>
           <label class="mf-label" for="et-due">Due date <span class="text-slate-400 font-normal">(optional)</span></label>
-          <input type="date" id="et-due" class="mf-input">
+          <input type="date" id="et-due" class="mf-input" min="{{ today|date:'Y-m-d' }}">
           <span class="mf-hint">Leave blank to set later</span>
         </div>
       </div>

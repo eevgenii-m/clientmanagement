@@ -107,6 +107,12 @@ DATABASES = {
 }
 
 
+# Authentication backends — email OR username login
+AUTHENTICATION_BACKENDS = [
+    'clientmanagement.emailbackend.EmailOrUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
 

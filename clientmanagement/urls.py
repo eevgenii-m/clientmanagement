@@ -24,6 +24,7 @@ from clientmanagement import generatefileviews as generate_files
 from models import views as models_views
 from models import projectviews as project_views
 from models import sharedfileviews
+from models import adminviews
 from models.email import mailbox
 
 
@@ -35,6 +36,7 @@ urlpatterns = [
     path('clients/<int:clientid>', clientmanagement_views.clientview, name='oneclient'),
     path('clients/<int:clientid>/printer', models_views.printerForm, name='clientprinter'),
     path('clients/<int:clientid>/computer', models_views.computerForm, name='clientcomputer'),
+    path('people/new', models_views.personForm, name='newperson'),
     path('clients/<int:clientid>/person', models_views.personForm, name='clientperson'),
     path('clients/<int:clientid>/domain', models_views.domainForm, name='clientdomain'),
     path('clients/<int:clientid>/router', models_views.routerForm, name='clientrouter'),
@@ -108,8 +110,13 @@ urlpatterns = [
     path('updates/', clientmanagement_views.systemupdatesview, name='updates'),
     path('updates/post', models_views.PostSystemUpdate, name='postupdate'),
 
-    path('usermanagement/', clientmanagement_views.usermanagement, name='usermanagement'),
-    path('usermanagement/adduser', models_views.addUserForm, name='adduser'),
+    path('usermanagement/', adminviews.admin_portal, name='usermanagement'),
+    path('usermanagement/users/', adminviews.admin_users, name='admin_users'),
+    path('usermanagement/users/add', adminviews.admin_user_add, name='admin_user_add'),
+    path('usermanagement/users/<int:user_id>/edit', adminviews.admin_user_edit, name='admin_user_edit'),
+    path('usermanagement/users/<int:user_id>/delete', adminviews.admin_user_delete, name='admin_user_delete'),
+    path('usermanagement/login-logs/', adminviews.admin_login_logs, name='admin_login_logs'),
+    path('usermanagement/adduser', models_views.addUserForm, name='adduser'),  # legacy
     path('', clientmanagement_views.homepage, name='homepage'),
 
     path('me', clientmanagement_views.userpersonalpage, name='personal_page'),

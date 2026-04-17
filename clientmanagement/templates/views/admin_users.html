@@ -1,0 +1,162 @@
+{% extends "_basenorm.html" %}
+{% load static %}
+
+{% block page_title %}Users — Admin Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+html, body { overflow: auto; height: auto; }
+</style>
+{% endblock %}
+
+{% block body %}
+
+<!-- Sticky header -->
+<div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
+<div class="max-w-5xl mx-auto flex items-center gap-3">
+    <a href="{% url 'usermanagement' %}"
+       class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mr-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Admin<span class="hidden sm:inline"> Portal</span>
+    </a>
+    <h1 class="text-xl font-semibold text-slate-800">Users</h1>
+    <div class="flex-1"></div>
+    <a href="{% url 'admin_user_add' %}"
+       class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        <span class="hidden sm:inline">Add User</span>
+    </a>
+</div>
+</div>
+
+<div class="max-w-5xl mx-auto">
+
+{% if messages %}
+{% for msg in messages %}
+<div class="mb-4 px-4 py-3 rounded-xl text-sm
+     {% if 'error' in msg.tags %}bg-red-50 border border-red-200 text-red-700
+     {% else %}bg-emerald-50 border border-emerald-200 text-emerald-700{% endif %}">
+    {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+<table class="w-full table-fixed">
+    <colgroup>
+        <col><!-- Name -->
+        <col class="hidden md:table-column"><!-- Email -->
+        <col class="hidden sm:table-column" style="width:90px"><!-- Role -->
+        <col class="hidden lg:table-column" style="width:100px"><!-- Last login -->
+        <col style="width:90px"><!-- Actions -->
+    </colgroup>
+    <thead class="bg-slate-50 border-b border-slate-200">
+        <tr>
+            <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Name</th>
+            <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 hidden md:table-cell">Email</th>
+            <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 hidden sm:table-cell">Role</th>
+            <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500 hidden lg:table-cell">Last login</th>
+            <th class="px-4 py-2"></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for u in user_list %}
+    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors" id="user-row-{{ u.id }}">
+        <td class="px-4 py-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+                     {% if u.is_superuser %}bg-purple-100 text-purple-700
+                     {% elif u.is_staff %}bg-blue-100 text-blue-700
+                     {% else %}bg-slate-100 text-slate-600{% endif %}">
+                    {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
+                </div>
+                <div class="min-w-0">
+                    <div class="text-sm font-medium text-slate-800 truncate">{{ u.get_full_name|default:u.username }}</div>
+                    <div class="text-xs text-slate-400 truncate md:hidden">{{ u.email }}</div>
+                </div>
+            </div>
+        </td>
+        <td class="px-4 py-3 hidden md:table-cell">
+            <a href="mailto:{{ u.email }}" class="text-sm text-blue-600 hover:text-blue-800 transition-colors truncate block max-w-xs">{{ u.email }}</a>
+        </td>
+        <td class="px-4 py-3 hidden sm:table-cell">
+            {% if u.is_superuser %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">Admin</span>
+            {% elif u.is_staff %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">Staff</span>
+            {% else %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">User</span>
+            {% endif %}
+        </td>
+        <td class="px-4 py-3 hidden lg:table-cell">
+            {% if u.last_login %}
+            <span class="text-xs text-slate-500">{{ u.last_login|date:"M j, Y" }}</span>
+            {% else %}
+            <span class="text-xs text-slate-300">Never</span>
+            {% endif %}
+        </td>
+        <td class="px-4 py-3 text-right">
+            <div class="flex items-center justify-end gap-1">
+                <a href="{% url 'admin_user_edit' u.id %}"
+                   class="p-1.5 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </a>
+                {% if u != request.user and not u.is_superuser or request.user.is_superuser and u != request.user %}
+                <button type="button"
+                        onclick="deleteUser({{ u.id }}, '{{ u.get_full_name|default:u.username|escapejs }}')"
+                        class="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+                {% endif %}
+            </div>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="5" class="px-4 py-10 text-center text-sm text-slate-400">No users found.</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+</div>{# end max-w-5xl #}
+
+{% endblock %}
+
+{% block extra_javascript %}
+<script>
+function getCookie(name) {
+    var m = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[2]) : '';
+}
+
+function deleteUser(userId, fullName) {
+    if (!confirm('Delete user "' + fullName + '"?\nThis cannot be undone.')) return;
+    fetch('/usermanagement/users/' + userId + '/delete', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            var row = document.getElementById('user-row-' + userId);
+            if (row) row.remove();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(function() { alert('Network error — please try again.'); });
+}
+</script>
+{% endblock %}
