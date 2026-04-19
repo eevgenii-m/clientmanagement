@@ -123,7 +123,7 @@ th.sortable:hover { color:#1e293b; }
 
     <span class="text-sm font-semibold text-slate-800 mr-1">Projects</span>
 
-    <!-- CHANGE 4: Archived link with count -->
+    <!-- Archived link with count -->
     <a href="{% url 'archived_projects' %}"
        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,23 +138,25 @@ th.sortable:hover { color:#1e293b; }
 
     <div class="flex-1"></div>
 
-    <!-- CHANGE 2: Refresh button -->
-    <button onclick="window.location.reload()"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-        </svg>
-        Refresh
-    </button>
+    <!-- Action buttons — wrap together on mobile -->
+    <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="window.location.reload()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Refresh
+        </button>
 
-    <button onclick="openNewProjectModal()"
-            class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        New Project
-    </button>
+        <button onclick="openNewProjectModal()"
+                class="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            New Project
+        </button>
+    </div>
 
 </div>
 </div>
@@ -281,7 +283,6 @@ th.sortable:hover { color:#1e293b; }
             <col><!-- task name — flexible -->
             <col class="hidden md:table-column" style="width:120px">
             <col class="hidden md:table-column" style="width:100px">
-            <col class="hidden md:table-column" style="width:110px"><!-- created by -->
             <col class="hidden md:table-column" style="width:120px">
             <col class="hidden md:table-column" style="width:85px">
             <col style="width:60px">
@@ -301,9 +302,6 @@ th.sortable:hover { color:#1e293b; }
             <th class="sort-header sortable text-left px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden md:table-cell"
                 data-col="priority" onclick="sortTasks({{ project.id }}, 'priority')">
                 Priority <span class="sort-indicator text-blue-500"></span>
-            </th>
-            <th class="text-left px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden md:table-cell">
-                Created by
             </th>
             <th class="sort-header sortable text-left px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden lg:table-cell"
                 data-col="assigned" onclick="sortTasks({{ project.id }}, 'assigned')">
@@ -331,21 +329,52 @@ th.sortable:hover { color:#1e293b; }
             <td class="px-1 py-2.5 w-7">
                 <span class="drag-handle task-drag-handle" title="Drag to reorder">⠿</span>
             </td>
-            <!-- CHANGE 5: line-clamp-2 on task title cell -->
+            <!-- task title cell: initials above, then title -->
             <td class="px-3 py-2">
+                {% if task.created_by or task.assigned_to %}
+                <div class="flex items-center gap-0.5 mb-0.5">
+                    {% if task.created_by %}
+                    <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                          title="Created by: {{ task.created_by.get_full_name|default:task.created_by.username }}">
+                        {{ task.created_by.first_name|first|upper }}{{ task.created_by.last_name|first|upper }}
+                    </span>
+                    {% endif %}
+                    {% if task.assigned_to %}
+                    <span class="text-slate-400 leading-none mx-0.5" style="font-size:9px;font-weight:700">→</span>
+                    <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0"
+                          title="Assigned to: {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}">
+                        {{ task.assigned_to.first_name|first|upper }}{{ task.assigned_to.last_name|first|upper }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
                 <div class="text-sm font-medium line-clamp-2 cursor-pointer hover:text-blue-600 {% if task.is_overdue %}text-red-600{% else %}text-slate-800{% endif %}"
                      onclick="openEditTaskModal({{ task.id }}, {{ project.id }})">{{ task.title }}</div>
                 {% if task.description %}
                 <div class="text-xs text-slate-400 truncate mt-0.5">{{ task.description|truncatechars:60 }}</div>
                 {% endif %}
             </td>
+            <!-- Fix 6: status as badge dropdown (Alpine.js, position:fixed) -->
             <td class="px-3 py-2 hidden md:table-cell">
-                <select class="inline-select status-{{ task.status }}"
-                        onchange="quickUpdateTask({{ task.id }}, 'status', this.value, this)">
-                    {% for val, label in status_choices %}
-                    <option value="{{ val }}"{% if task.status == val %} selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
+                <div x-data="{ open: false }" class="inline-block relative">
+                    <button @click="open = !open" id="status-btn-{{ task.id }}"
+                            class="badge inline-flex items-center gap-1 cursor-pointer status-{{ task.status }}">
+                        <span id="status-label-{{ task.id }}">{{ task.get_status_display }}</span>
+                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div x-show="open" x-cloak @click.outside="open = false"
+                         x-init="$watch('open', function(v){ if(v){ var r=$el.previousElementSibling.getBoundingClientRect(); $el.style.top=r.bottom+2+'px'; $el.style.left=r.left+'px'; } })"
+                         style="position:fixed;z-index:9999;"
+                         class="bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[130px]">
+                        {% for val, label in status_choices %}
+                        <button type="button"
+                                @click="open = false; quickUpdateTaskStatus({{ task.id }}, '{{ val }}', '{{ label }}')"
+                                class="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-50 text-slate-700">{{ label }}</button>
+                        {% endfor %}
+                    </div>
+                </div>
             </td>
             <td class="px-3 py-2 hidden md:table-cell">
                 <select class="inline-select priority-{{ task.priority }}"
@@ -354,16 +383,6 @@ th.sortable:hover { color:#1e293b; }
                     <option value="{{ val }}"{% if task.priority == val %} selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
-            </td>
-            <td class="px-3 py-2 hidden md:table-cell">
-                {% if task.created_by %}
-                <div class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600"
-                     title="{{ task.created_by.get_full_name|default:task.created_by.username }}">
-                    {{ task.created_by.first_name|first|upper }}{{ task.created_by.last_name|first|upper }}
-                </div>
-                {% else %}
-                <span class="text-xs text-slate-300">—</span>
-                {% endif %}
             </td>
             <td class="px-3 py-2 hidden lg:table-cell">
                 {% if task.assigned_to %}
@@ -651,12 +670,18 @@ th.sortable:hover { color:#1e293b; }
           </select>
         </div>
       </div>
-      <div class="mf-row">
-        <label class="mf-label" for="et-assigned">Assign to <span class="text-slate-400 font-normal">(optional)</span></label>
-        <select id="et-assigned" class="mf-input">
-          <option value="">— Unassigned —</option>
-          {% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}
-        </select>
+      <div class="mf-2col mf-row">
+        <div>
+          <label class="mf-label" for="et-assigned">Assign to <span class="text-slate-400 font-normal">(optional)</span></label>
+          <select id="et-assigned" class="mf-input">
+            <option value="">— Unassigned —</option>
+            {% for u in users %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mf-label">Created by</label>
+          <div id="et-created-by" class="mf-input" style="background:#f8fafc; color:#64748b; cursor:default; min-height:36px; display:flex; align-items:center;">—</div>
+        </div>
       </div>
       <div class="mf-2col mf-row">
         <div>
@@ -701,6 +726,7 @@ taskCache[{{ task.id }}] = {
     start_date:     '{{ task.start_date|date:"Y-m-d"|default:"" }}',
     due_date:       '{{ task.due_date|date:"Y-m-d"|default:"" }}',
     project_id:     {{ project.id }},
+    created_by:     '{{ task.created_by.get_full_name|default:task.created_by.username|default:""|escapejs }}',
 };
 {% endif %}{% endfor %}
 {% endfor %}
@@ -751,7 +777,10 @@ function toggleProject(pid) {
     if (chevron) chevron.style.transform = nowCollapsed ? 'rotate(-90deg)' : '';
 }
 
-// ── Client-side column sort (scoped per project) ─────────────────
+// ── Client-side column sort (scoped per project, persisted to localStorage) ──
+var SORT_USER_ID = '{{ request.user.id }}';
+function _taskSortKey(pid)  { return 'project_tasks_sort_' + SORT_USER_ID + '_' + pid; }
+
 function sortTasks(projectId, column) {
     var tbody = document.getElementById('project-tasks-' + projectId);
     if (!tbody) return;
@@ -762,9 +791,23 @@ function sortTasks(projectId, column) {
     tbody.dataset.sortDir = dir;
     tbody.dataset.sortCol = column;
 
+    // Persist sort to localStorage
+    try { localStorage.setItem(_taskSortKey(projectId), JSON.stringify({col: column, dir: dir})); } catch(e) {}
+
+    _applySortTasks(tbody, column, dir);
+
+    // Update sort indicators — only within this project's table
+    var table = tbody.closest('table');
+    if (table) {
+        table.querySelectorAll('.sort-indicator').forEach(function(el) { el.textContent = ''; });
+        var activeInd = table.querySelector('.sort-header[data-col="' + column + '"] .sort-indicator');
+        if (activeInd) activeInd.textContent = dir === 'asc' ? ' ↑' : ' ↓';
+    }
+}
+
+function _applySortTasks(tbody, column, dir) {
     var priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
     var statusOrder   = { notstarted: 0, inprogress: 1, onhold: 2, blocked: 3, done: 4 };
-
     var rows = Array.from(tbody.querySelectorAll('tr[data-task-id]'));
     rows.sort(function(a, b) {
         var av, bv;
@@ -790,16 +833,7 @@ function sortTasks(projectId, column) {
         var result = av < bv ? -1 : av > bv ? 1 : 0;
         return dir === 'asc' ? result : -result;
     });
-
     rows.forEach(function(row) { tbody.appendChild(row); });
-
-    // Update sort indicators — only within this project's table
-    var table = tbody.closest('table');
-    if (table) {
-        table.querySelectorAll('.sort-indicator').forEach(function(el) { el.textContent = ''; });
-        var activeInd = table.querySelector('.sort-header[data-col="' + column + '"] .sort-indicator');
-        if (activeInd) activeInd.textContent = dir === 'asc' ? ' ↑' : ' ↓';
-    }
 }
 
 // ── DOMContentLoaded: restore collapse + init SortableJS ─────────
@@ -855,6 +889,31 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    // Restore sort state per project from localStorage
+    {% for project in projects %}
+    (function() {
+        var pid = {{ project.id }};
+        var tbody = document.getElementById('project-tasks-' + pid);
+        if (!tbody) return;
+        try {
+            var saved = localStorage.getItem(_taskSortKey(pid));
+            if (saved) {
+                var s = JSON.parse(saved);
+                if (s && s.col) {
+                    tbody.dataset.sortDir = s.dir || 'asc';
+                    tbody.dataset.sortCol = s.col;
+                    _applySortTasks(tbody, s.col, s.dir || 'asc');
+                    var table = tbody.closest('table');
+                    if (table) {
+                        var ind = table.querySelector('.sort-header[data-col="' + s.col + '"] .sort-indicator');
+                        if (ind) ind.textContent = (s.dir === 'desc') ? ' ↓' : ' ↑';
+                    }
+                }
+            }
+        } catch(e) {}
+    })();
+    {% endfor %}
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -981,6 +1040,7 @@ function openEditTaskModal(taskId, projectId) {
     document.getElementById('et-assigned').value    = t.assigned_to_id || '';
     document.getElementById('et-start').value       = t.start_date || '';
     document.getElementById('et-due').value         = t.due_date || '';
+    document.getElementById('et-created-by').textContent = t.created_by || '—';
     showErr('et-title-err', '');
     document.getElementById('modal-edit-task').style.display = 'flex';
     setTimeout(function() { document.getElementById('et-title').focus(); }, 50);
@@ -1004,33 +1064,53 @@ function submitEditTask() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// QUICK STATUS/PRIORITY (inline selects — no reload)
+// QUICK STATUS update (badge dropdown — no page reload)
 // ══════════════════════════════════════════════════════════════════
+function quickUpdateTaskStatus(taskId, value, label) {
+    // Update badge appearance
+    var btn = document.getElementById('status-btn-' + taskId);
+    var lbl = document.getElementById('status-label-' + taskId);
+    if (btn) {
+        ['notstarted','inprogress','done','blocked','onhold'].forEach(function(s) {
+            btn.classList.remove('status-' + s);
+        });
+        btn.classList.add('status-' + value);
+    }
+    if (lbl) lbl.textContent = label;
+    // Update row data-status (used by sort + refreshBadge)
+    var row = document.getElementById('task-row-' + taskId);
+    if (row) row.dataset.status = value;
+    // Update taskCache
+    if (taskCache[taskId]) taskCache[taskId].status = value;
+    // AJAX save
+    var payload = { title: (taskCache[taskId] && taskCache[taskId].title) || '(task)', status: value };
+    csrfFetch('/projects/task/' + taskId + '/edit', payload)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (!d.ok) console.error('quickUpdateTaskStatus:', d.error);
+            if (row) refreshBadge(row.dataset.project);
+        });
+}
+
+// Quick priority (inline select — kept as-is for priority)
 function quickUpdateTask(taskId, field, value, selectEl) {
     var oldCls = Array.from(selectEl.classList).find(function(c) { return c.startsWith(field + '-'); });
     if (oldCls) selectEl.classList.remove(oldCls);
     selectEl.classList.add(field + '-' + value);
     if (taskCache[taskId]) taskCache[taskId][field] = value;
-
     var payload = { title: (taskCache[taskId] && taskCache[taskId].title) || '(task)' };
     payload[field] = value;
-
     csrfFetch('/projects/task/' + taskId + '/edit', payload)
         .then(function(r) { return r.json(); })
-        .then(function(d) {
-            if (!d.ok) console.error('quickUpdateTask:', d.error);
-            var row = document.getElementById('task-row-' + taskId);
-            if (row) refreshBadge(row.dataset.project);
-        });
+        .then(function(d) { if (!d.ok) console.error('quickUpdateTask:', d.error); });
 }
+
 function refreshBadge(pid) {
     var tbody = document.getElementById('project-tasks-' + pid);
     if (!tbody) return;
-    var rows = tbody.querySelectorAll('[data-task-id]');
     var open = 0;
-    rows.forEach(function(r) {
-        var sel = r.querySelector('select[onchange*="status"]');
-        if (sel && sel.value !== 'done') open++;
+    tbody.querySelectorAll('[data-task-id]').forEach(function(r) {
+        if (r.dataset.status !== 'done') open++;
     });
     var badge = document.getElementById('badge-' + pid);
     if (badge) badge.textContent = open + ' open';

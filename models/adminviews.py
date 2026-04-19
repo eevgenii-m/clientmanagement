@@ -68,6 +68,15 @@ def admin_user_delete(request, user_id):
 
 # ── Add user ──────────────────────────────────────────────────────────────────
 
+def _role_from_user(u):
+    """Return 'admin', 'staff', or 'user' for a User instance."""
+    if u.is_superuser:
+        return 'admin'
+    if u.is_staff:
+        return 'staff'
+    return 'user'
+
+
 @staff_required
 def admin_user_add(request):
     errors = []
@@ -79,7 +88,7 @@ def admin_user_add(request):
         last_name  = request.POST.get('last_name',  '').strip()
         email      = request.POST.get('email',      '').strip().lower()
         password   = request.POST.get('password',   '')
-        is_staff   = request.POST.get('is_staff')  == '1'
+        role       = request.POST.get('role', 'user')  # 'user' | 'staff' | 'admin'
 
         if not first_name or not last_name:
             errors.append('First name and last name are required.')
@@ -98,7 +107,10 @@ def admin_user_add(request):
                 first_name=first_name,
                 last_name=last_name,
             )
-            user.is_staff = is_staff
+            # Only superusers may assign elevated roles
+            if request.user.is_superuser:
+                user.is_staff     = role in ('staff', 'admin')
+                user.is_superuser = role == 'admin'
             user.save()
             return redirect('admin_users')
 
@@ -120,7 +132,6 @@ def admin_user_edit(request, user_id):
         return render(request, 'views/admin_403.html', status=403)
 
     errors = []
-    form_data = {}
 
     if request.method == 'POST':
         form_data = request.POST
@@ -128,7 +139,7 @@ def admin_user_edit(request, user_id):
         last_name    = request.POST.get('last_name',    '').strip()
         email        = request.POST.get('email',        '').strip().lower()
         new_password = request.POST.get('password',     '').strip()
-        is_staff     = request.POST.get('is_staff')    == '1'
+        role         = request.POST.get('role', 'user')  # 'user' | 'staff' | 'admin'
 
         if not first_name or not last_name:
             errors.append('First name and last name are required.')
@@ -144,12 +155,24 @@ def admin_user_edit(request, user_id):
             edit_user.last_name  = last_name
             edit_user.email      = email
             edit_user.username   = email[:150]
-            if request.user.is_superuser:   # only superusers can toggle staff flag
-                edit_user.is_staff = is_staff
+            # Only superusers can change roles; admins cannot demote themselves
+            if request.user.is_superuser and edit_user != request.user:
+                edit_user.is_staff     = role in ('staff', 'admin')
+                edit_user.is_superuser = role == 'admin'
             if new_password:
                 edit_user.set_password(new_password)
             edit_user.save()
             return redirect('admin_users')
+
+    else:
+        # Pre-populate form_data so the template can use form_data.fieldname
+        # uniformly (avoids VariableDoesNotExist with edit_user filter args).
+        form_data = {
+            'first_name': edit_user.first_name,
+            'last_name':  edit_user.last_name,
+            'email':      edit_user.email,
+            'role':       _role_from_user(edit_user),
+        }
 
     return render(request, 'views/admin_user_form.html', {
         'mode': 'edit',

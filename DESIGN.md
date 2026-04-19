@@ -237,6 +237,20 @@ Sidebar sections: **Main** → Home, Clients, People | **Tools** → Wiki, Tools
 {% if request.resolver_match.url_name in 'usermanagement admin_users admin_user_add admin_user_edit admin_login_logs' %}nav-item-active{% endif %}
 ```
 
+### Admin Portal — User Roles
+Three tiers map to Django's built-in flags (no custom model field needed):
+
+| Role | `is_staff` | `is_superuser` | Access |
+|------|-----------|----------------|--------|
+| User | `False` | `False` | Standard portal access only |
+| Staff | `True` | `False` | Admin Portal access |
+| Admin | `True` | `True` | Full superuser access |
+
+- Role is selected via a `<select name="role">` in `admin_user_form.html` (superusers only)
+- `_role_from_user(u)` helper in `adminviews.py` converts a User instance back to `'admin'`/`'staff'`/`'user'`
+- Self-demotion blocked: `edit_user != request.user` guard in `admin_user_edit`
+- Staff users cannot edit or delete superuser accounts
+
 Active state via `request.resolver_match.url_name` in templates:
 ```html
 {% if request.resolver_match.url_name == 'allclients' %}nav-item-active{% endif %}
@@ -464,8 +478,11 @@ Five templates cover the Secret Notes module:
 - **Client-side column sort** (`sortTasks(projectId, col)`): reads `data-title`/`data-status`/`data-priority`/`data-assigned`/`data-due` from `<tr>` rows, appends sorted rows back into `<tbody id="task-list-{id}">`; sort indicator `▲`/`▼` shown in header `<span class="sort-indicator">`
 - **Table structure**: `table-fixed` + `<colgroup>` (28px drag | flex title | 130px status | 100px priority | 130px assigned | 90px due | 58px actions); columns hidden with `hidden md:table-cell` / `hidden lg:table-cell` on mobile
 - **Archive**: form POST `action=archive` → `edit_project` → `redirect('all_projects')`; Restore: `action=unarchive` → `redirect('archived_projects')`
-- **Task quick-edit**: inline `<select class="inline-select">` for status/priority POSTs via `quickUpdateTask()` AJAX; color class updated via `refreshBadge()`
-- **Four modals**: New Project / Edit Project (title, description, status, priority, due date, color swatches) / Add Task / Edit Task (title, description, status, priority, assigned to, start date, due date); all reload page on success
+- **Task status dropdown**: status column uses Alpine.js `position:fixed` badge dropdown (same pattern as Todo status — see below); `quickUpdateTaskStatus(taskId, value, label)` updates badge DOM + `row.dataset.status` + fires AJAX; `refreshBadge(pid)` counts open tasks via `row.dataset.status !== 'done'`
+- **Task priority quick-edit**: inline `<select class="inline-select priority-{val}">` for priority POSTs via `quickUpdateTask()` AJAX; color class updated via `refreshBadge()`
+- **Two-letter initials**: task rows show creator avatar (slate, 2 initials) `→` assignee avatar (blue, 2 initials) above task title; `title` attr shows full name on hover; `projectviews.py` uses `prefetch_related('tasks__created_by')` to avoid N+1
+- **Sort persistence**: `sortTasks(projectId, col)` saves `{col, dir}` to localStorage key `project_tasks_sort_{user_id}_{project_id}`; DOMContentLoaded restores sort for each project via `_applySortTasks(tbody, col, dir)` helper
+- **Four modals**: New Project / Edit Project (title, description, status, priority, due date, color swatches) / Add Task / Edit Task (title, description, status, priority, assigned to, created by read-only, start date, due date); all reload page on success
 
 ## Todo module (`views/todos.html`)
 
@@ -474,12 +491,13 @@ Five templates cover the Secret Notes module:
 - **Flat table per panel**: single `<table>` with columns: drag | task | status | priority | assigned | due | actions. No collapsible sections.
 - `tbody` IDs: `todo-tbody-personal` / `todo-tbody-shared`. Rows carry `data-todo-id`, `data-title`, `data-status`, `data-priority`, `data-due`.
 - **Status badge dropdown** — `position:fixed` z-index pattern (see below): Alpine.js `x-data="{ open:false }"` per row; `x-init` + `$watch('open', …)` positions the dropdown via `getBoundingClientRect()` when opened.
-- **Edit modal**: single `#edit-todo-modal` overlay at top of page; `openEditTodo()` JS function populates fields and shows it; Assign-to row visible for shared scope only.
-- **SortableJS drag-drop**: `Sortable` on each `<tbody>`; `onEnd` sends `{todo_id, new_status:null, order:[]}` to `POST /todo/reorder` (reorder only, no status change).
-- **Column sort**: `sortTodos(panel, col)` per panel; priority order: high→medium→low; sort indicators per table.
+- **Add/Edit modals**: project-task modal style — `.modal-backdrop` (fixed overlay), `.modal-header` (title + X button), `.modal-body` (mf-* labelled fields), `.modal-footer` (action buttons); `openAddTodoModal()` resets all fields + focuses title; `openEditTodo()` populates fields + focuses title; Assign-to row visible for shared scope only.
+- **SortableJS drag-drop**: `Sortable` on each `<tbody>`; drag handles visible on all screen sizes (mobile included); `onEnd` sends `{todo_id, new_status:null, order:[]}` to `POST /todo/reorder` (reorder only, no status change).
+- **Column sort**: `sortTodos(panel, col)` saves `{col, dir}` to localStorage key `todo_sort_{user_id}_{panel}`; restored in DOMContentLoaded via `_applyTodoSort(tbody, col, dir)` helper; priority order: high→medium→low; sort indicators per table.
+- **Two-letter initials (shared panel)**: rows show creator avatar (slate, 2 initials) `→` assignee avatar (blue, 2 initials); personal panel has no assignee column.
 - **Quick-add form**: below each table; `scope` hidden input.
 - **Auto-archive**: `all_todos` view bulk-archives done todos with `completed_on <= now - 14 days`.
-- **Shared Assign-to**: assignee shown as indigo avatar in Assigned column; personal column shows "—".
+- **Shared Assign-to**: assignee shown as avatar (2 initials) in Assigned column; personal column shows "—".
 
 ### Status dropdown z-index fix (`position:fixed` + Alpine.js `x-init`)
 
@@ -544,7 +562,7 @@ Use this pattern for any status/priority dropdown inside a table row. The `x-ini
 | `forms/widget/maybequill.html` | Renders Quill JSON or plain text (legacy wiki only) |
 | `views/allfiles.html` | Shared files list: DataTable, search, View action only (Copy/Delete on detail page), Upload Links button |
 | `views/uploadlinks.html` | Upload Links list: Title, Created, Expires, Files, Status, View + Edit actions |
-| `views/createuploadlink.html` | Create Upload Link form: title, instructions, expiry days, max files |
+| `views/createuploadlink.html` | Create Upload Link form: title, instructions, expiry days, max files (default: 1) |
 | `views/viewuploadlink.html` | Upload Link detail: shareable URL with copy, file table with downloads, Edit + deactivate + delete |
 | `views/edituploadlink.html` | Edit Upload Link form: pre-filled title, instructions, optional expiry extension, max files |
 | `views/clientuploadpage.html` | Public upload page (no auth): multi-file upload form, success state |
@@ -560,6 +578,6 @@ Use this pattern for any status/priority dropdown inside a table row. The `x-ini
 | `views/archivedtodos.html` | Archived tasks: ← To-Do, Restore + Delete, scope/priority badges, completed/archived dates |
 | `views/admin_portal.html` | Admin dashboard: stats cards, quick-action cards, recent login activity table |
 | `views/admin_users.html` | User management: table of all users, add/edit/delete, role badges, JS delete via fetch |
-| `views/admin_user_form.html` | Add / edit user form: first/last name, email (= username), password, is_staff toggle (superuser only) |
+| `views/admin_user_form.html` | Add / edit user form: first/last name, email (= username), password, role select (User/Staff/Admin — superuser only); amber warning when editing own account |
 | `views/admin_login_logs.html` | Login log viewer: timestamp, user/email, IP, success/fail badge; last 300 records |
 | `views/admin_403.html` | Access denied page for non-staff users attempting to reach admin URLs |

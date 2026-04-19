@@ -1,4 +1,7 @@
-<tr id="{{ tool.id }}" class="hover:bg-slate-50 transition-colors">
+<tr id="{{ tool.id }}"
+    data-url="{% url 'tool_view' toolid=tool.id %}"
+    onclick="if(!event.target.closest('a,button,form')) window.location=this.dataset.url"
+    class="hover:bg-slate-50 transition-colors cursor-pointer">
 
     <!-- Name — 2-line clamp via inner div -->
     <td class="font-medium text-slate-800" title="{{ tool.get_name_for_user }}">
@@ -41,15 +44,5 @@
 
     <!-- Created on -->
     <td class="text-sm text-slate-500 tabular-nums">{{ tool.createdon|date:"Y-m-d" }}</td>
-
-    <!-- Actions -->
-    <td>
-        {% if user.is_authenticated %}
-        <a href="{% url 'tool_view' toolid=tool.id %}"
-           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
-            View
-        </a>
-        {% endif %}
-    </td>
 
 </tr>

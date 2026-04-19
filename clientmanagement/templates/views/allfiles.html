@@ -13,14 +13,13 @@
         width: 100% !important;
     }
 
-    #filestable th:nth-child(1) { width: 24%; }   /* Filename     */
+    #filestable th:nth-child(1) { width: 31%; }   /* Filename     */
     #filestable th:nth-child(2) { width: 18%; }   /* Description  */
     #filestable th:nth-child(3) { width: 8%;  }   /* Size         */
     #filestable th:nth-child(4) { width: 9%;  }   /* Downloads    */
     #filestable th:nth-child(5) { width: 11%; }   /* Uploaded on  */
-    #filestable th:nth-child(6) { width: 11%; }   /* Expires on   */
-    #filestable th:nth-child(7) { width: 9%;  }   /* Days left    */
-    #filestable th:nth-child(8) { width: 7%;  }   /* Actions      */
+    #filestable th:nth-child(6) { width: 12%; }   /* Expires on   */
+    #filestable th:nth-child(7) { width: 11%; }   /* Days left    */
 
     #filestable .cell-clamp {
         overflow: hidden;
@@ -33,48 +32,47 @@
 
 {% block body %}
 
-<!-- Sticky header -->
+<!-- Sticky header: title+search always same line; buttons wrap below on mobile -->
 <div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-4">
-    <div class="max-w-5xl mx-auto flex items-center gap-3 flex-wrap">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center gap-3">
 
-        <div class="min-w-0 shrink-0">
-            <h1 class="text-xl font-semibold text-slate-800 leading-tight">Shared Files</h1>
-            <p class="text-xs text-slate-500">Temporary file sharing</p>
+        <!-- Title + Search: always on the same line -->
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+            <div class="shrink-0">
+                <h1 class="text-xl font-semibold text-slate-800 leading-tight">Shared Files</h1>
+                <p class="text-xs text-slate-500 hidden sm:block">Temporary file sharing</p>
+            </div>
+            <div class="flex-1 relative min-w-0">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+                </svg>
+                <input type="search" id="files-search"
+                       placeholder="Search files…"
+                       class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 font-sans transition-colors">
+            </div>
         </div>
 
-        <!-- Search -->
-        <div class="flex-1 relative min-w-[160px]">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
-                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
-            </svg>
-            <input type="search" id="files-search"
-                   placeholder="Search files…"
-                   class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 font-sans transition-colors">
+        <!-- Buttons: full width on mobile (wraps below), auto on desktop -->
+        {% if user.is_authenticated %}
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+            <a href="{% url 'all_upload_links' %}"
+               class="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Upload Links
+            </a>
+            <a href="{% url 'upload_shared_file' %}"
+               class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Upload File
+            </a>
         </div>
-
-        <!-- Upload Links button -->
-        {% if user.is_authenticated %}
-        <a href="{% url 'all_upload_links' %}"
-           class="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-sm text-white bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-            </svg>
-            Upload Links
-        </a>
-        {% endif %}
-
-        <!-- Upload button -->
-        {% if user.is_authenticated %}
-        <a href="{% url 'upload_shared_file' %}"
-           class="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Upload File
-        </a>
         {% endif %}
 
     </div>
@@ -91,12 +89,13 @@
                 <th class="hidden md:table-cell">Uploaded on</th>
                 <th>Expires on</th>
                 <th class="hidden md:table-cell">Days left</th>
-                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for sf in files %}
-            <tr class="hover:bg-slate-50 transition-colors {% if sf.is_expired %}opacity-50{% endif %}">
+            <tr data-url="{% url 'shared_file_view' fileuuid=sf.unid %}"
+                onclick="if(!event.target.closest('a,button,form')) window.location=this.dataset.url"
+                class="hover:bg-slate-50 transition-colors cursor-pointer {% if sf.is_expired %}opacity-50{% endif %}">
 
                 <!-- Filename -->
                 <td class="font-medium text-slate-800" title="{{ sf.filename_display }}">
@@ -143,16 +142,6 @@
                     {% endif %}
                 </td>
 
-                <!-- Actions -->
-                <td class="px-3 py-2">
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'shared_file_view' fileuuid=sf.unid %}"
-                       class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
-                        View
-                    </a>
-                    {% endif %}
-                </td>
-
             </tr>
             {% endfor %}
         </tbody>
@@ -174,7 +163,7 @@ $(document).ready(function() {
         "autoWidth": false,
         "order": [[4, "desc"]],
         "columnDefs": [
-            { "orderable": false, "targets": [1, 6, 7] }
+            { "orderable": false, "targets": [1, 6] }
         ]
     });
 

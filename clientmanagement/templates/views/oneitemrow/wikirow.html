@@ -1,10 +1,7 @@
-<tr id="{{ art.id }}" class="hover:bg-slate-50 transition-colors">
+<tr id="{{ art.id }}"
+    data-url="{{ art.get_link }}"
+    onclick="if(!event.target.closest('a,button,form')) window.location=this.dataset.url"
+    class="hover:bg-slate-50 transition-colors cursor-pointer">
     <td class="font-medium text-slate-800">{{ art.title }}</td>
     <td class="text-slate-500 text-sm tabular-nums">{{ art.updatedon|date:"Y-m-d" }}</td>
-    <td>
-        <a href="{{ art.get_link }}"
-           class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
-            View
-        </a>
-    </td>
 </tr>

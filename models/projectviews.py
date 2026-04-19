@@ -91,7 +91,7 @@ def all_projects(request):
     projects = (
         Project.objects
         .filter(is_archived=False)
-        .prefetch_related('tasks__assigned_to', 'tasks__subtasks')
+        .prefetch_related('tasks__assigned_to', 'tasks__created_by', 'tasks__subtasks')
         .order_by('order', 'created_on')
     )
     archived_count = Project.objects.filter(is_archived=True).count()

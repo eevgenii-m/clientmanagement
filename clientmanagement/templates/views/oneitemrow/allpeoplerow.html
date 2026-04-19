@@ -1,4 +1,7 @@
-<tr id="{{ person.id }}" class="hover:bg-slate-50 transition-colors">
+<tr id="{{ person.id }}"
+    x-data="{ open: false }"
+    @click="if(!$event.target.closest('button,a,form')) open = true"
+    class="hover:bg-slate-50 transition-colors cursor-pointer">
     <td class="py-2.5 pr-4 font-medium text-slate-800">{{ person.name }}</td>
     <td class="py-2.5 pr-4 text-slate-500">{{ person.employedby.name|default:"—" }}</td>
     <td class="py-2.5 pr-4 hidden md:table-cell">
@@ -18,11 +21,7 @@
         </a>
         {% endif %}
     </td>
-    <td class="py-2.5" x-data="{ open: false }">
-        <button @click="open = true"
-                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
-            View
-        </button>
+    <td class="py-2.5">
         {% include "views/modals/personmodal.html" with person=person fullinfo=True %}
     </td>
 </tr>

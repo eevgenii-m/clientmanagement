@@ -9,6 +9,34 @@ Files live on a network share: `\\192.168.10.35\website\clientmanagement\`.
 
 ---
 
+## Versioning
+
+Current version: **2.3.16**
+
+Format: `MAJOR.MINOR.PATCH`
+- **MAJOR** — complete UI/framework overhaul
+- **MINOR** — new feature module (new model, new page group)
+- **PATCH** — improvements, bug fixes, UX changes within existing features
+
+Rules:
+- Version is stored in `clientmanagement/settings/config.py` → `CLIENTMANAGEMENT_VERSION`
+- Exposed to templates via `context_processors.py` as both `CLIENTMANAGEMENT_VERSION` and `VERSION`
+- Displayed in footer as `v{{ VERSION }}`
+- **Always** update `CLAUDE.md` (this file) and `WHATSNEW.md` when completing a session
+- At the start of each session the user will say: "We are working on version X.Y.Z. Update WHATSNEW.md and CLAUDE.md DESIGN.md version when done."
+
+## Change tracking rules
+- Current version always listed at top of CLAUDE.md
+- Every change made in a session must be logged in WHATSNEW.md
+- Bugs fixed → add under "Bug fixes" in current version section
+- New features → add under "Changes in progress"  
+- When version is deployed to production → section becomes official
+  (remove "current development" label, add deployment date)
+- Never list features in WHATSNEW.md that are not yet built
+- File is named WHATSNEW.md (not THATSNEW.md)
+
+---
+
 ## Critical rules — read first
 - Always read CLAUDE.md and DESIGN.md completely before making any changes
 - Always update CLAUDE.md and DESIGN.md to reflect completed changes
@@ -469,8 +497,8 @@ Custom toolbar button triggers `<input type="file" accept=".md,.txt,.markdown">`
   - `views/todos.html`: Mobile 3-column view — on `< md` breakpoint shows only Task, Status, Edit button; Drag handle, Priority, Start (was already hidden), Due all hidden with `hidden md:table-cell` / `hidden md:table-column` in all 4 tables (personal active, personal done, shared active, shared done)
   - `views/todos.html`: Shared panel Assigned column — initials-only avatar (`title` attr for full name tooltip), removed full name `<span>` text; applies to both active and done rows
   - `views/allprojects.html`: Created by and Assigned columns — initials-only avatars (`title` attr for full name tooltip), removed full name `<span>` text beside them
-  - `views/uploadlinks.html`: "Create Upload Link" button text hidden on mobile (`hidden sm:inline`), icon always visible
-  - `views/edituploadlink.html`: "Back to link" nav link — text wraps to "Back" on mobile (`<span class="hidden sm:inline"> to link</span>`)
+  - `views/uploadlinks.html`: "Create Upload Link" button — full text shown always; `flex-wrap` on header inner div allows button to wrap to next line on mobile
+  - `views/edituploadlink.html`: "Back to link" nav link — full text always visible (no hidden span)
 - [x] **Session 3 — Admin portal** (`models/adminviews.py`, `models/loginlog.py`, `clientmanagement/emailbackend.py`):
   - **Email-based login**: `clientmanagement/emailbackend.py` — `EmailOrUsernameBackend` tries username first then case-insensitive email lookup; added to `AUTHENTICATION_BACKENDS` in `settings/base.py` before the default backend; login.html and loginform.py updated to show "Email" label and `type="email"` input
   - **Login logs**: `models/loginlog.py` — `LoginLog` model (user FK nullable, username_attempted, ip_address, timestamp, success, user_agent); signal handlers `log_successful_login` and `log_failed_login` connected to Django auth signals in `models/apps.py` `ready()` method; migration `0065_loginlog.py`
@@ -480,3 +508,38 @@ Custom toolbar button triggers `<input type="file" accept=".md,.txt,.markdown">`
   - **Sidebar**: `_base.html` — nav link changed from "Users" to "Admin Portal" with settings gear icon; active state check updated to include all admin URL names; still `{% if user.is_staff %}` gated
   - **Migration chain**: `0064_todo_start_date` → `0065_loginlog`
   - **User accounts**: email is now used as both `email` and `username` when creating/editing users via admin portal (email truncated to 150 chars for username field)
+- [x] **Session 4 — Bug fixes**:
+  - **Bug 1 — Admin add user 500 error**: Root cause: `edit_user.first_name` used as a `default` filter argument in `admin_user_form.html` when `edit_user` is not in context (add mode); Django raises `VariableDoesNotExist` for undefined filter arguments. Fix: `admin_user_edit` now pre-populates `form_data` dict on GET (`first_name`, `last_name`, `email`, `is_staff`); template simplified to use `{{ form_data.fieldname }}` without any `edit_user.X` filter args.
+  - **Bug 2 — Remove "Created by" from projects task table**: Removed colgroup `<col>`, thead `<th>`, and tbody `<td>` for "Created by" column from all project task tables. Added "Created by" as a read-only display field in the Edit Task modal alongside "Assign to" (2-column row using `mf-2col`). Added `created_by` to `taskCache` JS object; `openEditTaskModal` populates `et-created-by` div.
+  - **Bug 3 — Tools buttons size parity**: "Add Link" button updated from `px-3 py-2 text-xs w-3.5 h-3.5` to `px-4 py-2 text-sm w-4 h-4` — now matches "Add File" button exactly.
+  - **Bug 4 — Site-wide button wrapping on mobile**: Added `flex-wrap` to the inner `max-w-5xl` div of ALL sticky action bars across the entire portal. Pages updated: `allclients.html`, `allpeople.html`, `allwiki.html`, `uploadlinks.html`, `client.html`, `wikiview.html`, `secretnoteinternal.html`, `toolview.html`, `fileview.html`, `viewuploadlink.html`, `archivedprojects.html`, `archivedtodos.html`, `admin_portal.html`, `admin_users.html`, `admin_user_form.html`, `admin_login_logs.html`, `unimodelform.html`, `editfile.html`, `uploadfile.html`, `createuploadlink.html`, `edituploadlink.html`, `wikieditform.html`. With `flex-wrap`, buttons naturally move to the next row when horizontal space is insufficient on mobile.
+- [x] **Session 5 — Version 2.3.12**:
+  - **Versioning system**: `config.py` updated to `CLIENTMANAGEMENT_VERSION = '2.3.12'`; `context_processors.py` now exposes `VERSION` alias; `_base.html` footer shows `v{{ VERSION }}`; `THATSNEW.md` created; `## Versioning` section added to `CLAUDE.md`
+  - **Fix A — User dropdown**: z-index changed from `z-50` to `z-[9999]`; Admin Portal link (staff only) added to user dropdown above "Personal page"; Admin Portal sidebar nav link removed entirely (now only in dropdown)
+  - **Fix B — Site-wide clickable rows**: Actions/View column removed from all list pages; entire row navigates to detail (or opens modal for people); updated pages: `allclients.html`+`clientrow.html`, `allpeople.html`+`allpeoplerow.html`, `allwiki.html`+`wikirow.html`, `alltools.html`+`onetoolrow.html`, `allsecretnotes.html`+`secretnoterow.html`, `allfiles.html`, `todos.html`; DataTables `columnDefs` indices updated on all affected pages; `openTodoRow()` JS helper added to todos.html; `data-todo-desc` and `data-todo-scope` added to active todo `<tr>` elements; `x-data`+`@click` moved to `<tr>` on allpeoplerow.html for row-click modal opening
+  - **Fix C — Client detail duplicate Edit button**: Removed the entire `<div class="mt-5 pt-4...">` form block from `views/components/generalinfoclient.html` (Edit button in sticky header is the only one now)
+- [x] **Session 7 — Version 2.3.15**:
+  - **FIX 1 — User dropdown stacking context bug**: Root cause identified — `<header class="sticky z-10">` creates a CSS stacking context; all children (even `position:fixed z-[99999]`) paint at z:10 on the root, equal to page sticky bars that come later in DOM. Fix: changed `z-10` → `z-20` on the `<header>` element in `_base.html` so the entire header context paints above all z:10 page sticky headers.
+  - **FIX 2 — Tools header restructure** (`alltools.html`): Title + search bar now always on the same line; filter tabs (All/Links/Files) and action buttons (Add Link, Add File) moved to a second line on mobile (`w-full sm:w-auto` container with `flex-wrap`).
+  - **FIX 3 — Secret Notes header restructure** (`allsecretnotes.html`): Same pattern — title + search on line 1; filter tabs (Available/Unavailable/All) + New Note button on line 2 on mobile.
+  - **FIX 4 — All list pages: title+search always same line** (`allclients.html`, `allpeople.html`, `allwiki.html`, `allfiles.html`): Wrapped title and search in a single `flex-1` div so they are always on the same row; action buttons remain `w-full sm:w-auto` so they wrap below on mobile.
+  - **config.py**: Version bumped to `2.3.15`; Apache restart required
+  - **WHATSNEW.md**: 2.3.15 section added; 2.3.14 section finalized
+- [x] **Session 6 — Version 2.3.14**:
+  - **FIX 1 — User dropdown `position:fixed`**: Changed dropdown from `position:absolute z-[9999]` to `position:fixed z-[99999]` with Alpine.js `x-init`+`$watch` using `getBoundingClientRect()` to position relative to viewport — always appears above all page content on mobile
+  - **FIX 2 — Personal page redesign**: `user/personal/main.html` rewritten — Tailwind card layout with user info (avatar, name, email, role, member since), Security section (change password), API Key section (delete with confirm); extends `_basenarrow.html`; uses context: `user`, `api_key`, `deleted`, `del_page`
+  - **FIX 3 — Mobile 2-line headers**: All list page headers updated with `flex flex-wrap`; search takes `w-full sm:flex-1`; action buttons wrapped in `<div class="flex items-center gap-2 w-full sm:w-auto">`; subtitle hidden on mobile (`hidden sm:block`); applied to allclients, allpeople, allwiki, alltools, allsecretnotes, allfiles, allprojects, todos
+  - **FIX 4 — Clients subtitle**: Changed from "All managed client companies" to "All client companies"
+  - **FIX 5 — Password reset template check**: No portal-specific variables found in `registration/` templates — they are clean standalone files. SMTP 535 error is a server credential issue; `private/email-settings.cnf` on production needs to be verified
+  - **config.py**: Version bumped to `2.3.14`; Apache restart required
+  - **WHATSNEW.md**: 2.3.14 section added; 2.3.13 section finalized
+- [x] **Session 8 — Version 2.3.16**:
+  - **FIX 1 — Admin Portal Roles**: `models/adminviews.py` — added `_role_from_user()` helper; `admin_user_add` and `admin_user_edit` read `role` POST field and set `is_staff`/`is_superuser` flags accordingly (superusers only); self-demotion blocked via `edit_user != request.user` guard. `admin_user_form.html` — replaced `is_staff` checkbox with role `<select>` (User/Staff/Admin); amber warning shown when editing own account.
+  - **FIX 2 — Sort persistence**: `allprojects.html` — `sortTasks()` refactored to `_applySortTasks()` + `sortTasks()`; sort state saved in localStorage key `project_tasks_sort_<user_id>_<project_id>`; DOMContentLoaded loop restores sort for each project. `todos.html` — `sortTodos()` refactored with `_applyTodoSort()` helper; sort state saved in localStorage key `todo_sort_<user_id>_<panel>`; restored in DOMContentLoaded.
+  - **FIX 3 — Todo modal redesign**: `todos.html` — Add and Edit todo modals rewritten using project-task modal style (`.modal-backdrop`, `.modal-header`, `.modal-body`, `.modal-footer`, `mf-*` classes, close X button, `focus()` on title on open).
+  - **FIX 4 — Two-letter initials**: `allprojects.html` — task rows show creator avatar (2 initials, slate) + arrow + assignee avatar (2 initials, blue) above task title. `todos.html` — shared panel rows show creator + arrow + assignee avatars with 2-letter initials; Edit Task modal displays creator name in read-only field. `projectviews.py` — `prefetch_related('tasks__created_by')` added.
+  - **FIX 5 — Todo mobile drag**: `todos.html` — drag handle `<th>` in shared panel thead: removed `hidden md:table-cell`; drag handle `<td>` in personal and shared active tables: removed `hidden md:table-cell` from colgroup and tbody.
+  - **FIX 6 — Project task status badge dropdown**: `allprojects.html` — inline `<select class="inline-select">` replaced with Alpine.js fixed-position badge dropdown; `quickUpdateTaskStatus()` function updates badge DOM and `row.dataset.status` then fires AJAX; `refreshBadge()` updated to count open tasks via `row.dataset.status !== 'done'` instead of querying `<select>`.
+  - **Upload Links default max files**: `createuploadlink.html` — default changed from 10 to 1.
+  - **config.py**: Version bumped to `2.3.16`; Apache restart required (Python files changed)
+  - **WHATSNEW.md**: 2.3.16 section added

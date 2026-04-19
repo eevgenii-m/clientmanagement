@@ -20,7 +20,7 @@ html, body { overflow: auto; height: auto; }
 
 <!-- Sticky action bar -->
 <div class="sticky top-14 z-10 bg-slate-50 -mx-6 px-6 py-3 border-b border-slate-200 mb-6">
-<div class="max-w-5xl mx-auto flex items-center gap-3">
+<div class="max-w-5xl mx-auto flex items-center gap-3 flex-wrap">
     <a href="{% url 'admin_users' %}"
        class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mr-1">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,7 +66,7 @@ html, body { overflow: auto; height: auto; }
                 First name <span class="text-red-500">*</span>
             </label>
             <input type="text" name="first_name" required maxlength="150"
-                   value="{{ form_data.first_name|default:edit_user.first_name|default:'' }}"
+                   value="{{ form_data.first_name }}"
                    class="field-input">
         </div>
         <div>
@@ -74,7 +74,7 @@ html, body { overflow: auto; height: auto; }
                 Last name <span class="text-red-500">*</span>
             </label>
             <input type="text" name="last_name" required maxlength="150"
-                   value="{{ form_data.last_name|default:edit_user.last_name|default:'' }}"
+                   value="{{ form_data.last_name }}"
                    class="field-input">
         </div>
     </div>
@@ -84,7 +84,7 @@ html, body { overflow: auto; height: auto; }
             Email address <span class="text-red-500">*</span>
         </label>
         <input type="email" name="email" required maxlength="254"
-               value="{{ form_data.email|default:edit_user.email|default:'' }}"
+               value="{{ form_data.email }}"
                class="field-input">
         <p class="mt-1 text-xs text-slate-400">Used as login credential. Must be unique.</p>
     </div>
@@ -100,13 +100,21 @@ html, body { overflow: auto; height: auto; }
     </div>
 
     {% if request.user.is_superuser %}
-    <div class="flex items-center gap-3 pt-1">
-        <input type="checkbox" name="is_staff" value="1" id="id_is_staff"
-               {% if form_data.is_staff == '1' %}checked{% elif not form_data and edit_user.is_staff %}checked{% endif %}
-               class="w-4 h-4 rounded border-slate-300 text-blue-600">
-        <label for="id_is_staff" class="text-sm text-slate-700 cursor-pointer">
-            Staff access — can log in to Admin Portal
+    <div>
+        <label class="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5">
+            Role
         </label>
+        <select name="role" class="field-input">
+            <option value="user"  {% if form_data.role == 'user'  or not form_data.role %}selected{% endif %}>User — standard access</option>
+            <option value="staff" {% if form_data.role == 'staff' %}selected{% endif %}>Staff — access to Admin Portal</option>
+            <option value="admin" {% if form_data.role == 'admin' %}selected{% endif %}>Admin — full access (superuser)</option>
+        </select>
+        <p class="mt-1 text-xs text-slate-400">
+            User: regular portal access. Staff: can use Admin Portal. Admin: superuser with all permissions.
+            {% if mode == 'edit' and edit_user == request.user %}
+            <span class="text-amber-600 font-medium">Your own role cannot be changed here.</span>
+            {% endif %}
+        </p>
     </div>
     {% endif %}
 

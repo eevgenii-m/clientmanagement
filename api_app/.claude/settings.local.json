@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\\\Apache24\\\\logs\\\\\" 2>nul || dir \"C:\\\\Program Files\\\\Apache Group\\\\Apache2\\\\logs\\\\\")",
+      "Bash(dir \"C:\\\\Apache2.4\\\\logs\\\\\" 2>nul || echo \"Not found in common locations\")"
+    ]
+  }
+}
